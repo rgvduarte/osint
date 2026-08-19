@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Storm-Breaker — Ferramenta de Engenharia Social</title>
+<meta name="description" content="Página de documentação da ferramenta de pentest e engenharia social Storm-Breaker. Apenas para uso educacional e testes autorizados." />
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#0f1524; --card:#131b2e; --line:#243149;
+    --text:#e6edf6; --muted:#93a2bd; --brand:#4f8cff; --brand2:#7c5cff;
+    --accent:#22d3ee; --warn:#ffb020; --danger:#ff5470;
+    --radius:16px; --shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 700px at 80% -10%,rgba(124,92,255,.18),transparent 60%),
+               radial-gradient(1000px 600px at -10% 10%,rgba(34,211,238,.12),transparent 55%),
+               var(--bg);
+    color:var(--text); line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 20px}
+  .container{max-width:1080px}
+
+  /* Nav */
+  header.nav{position:sticky; top:0; z-index:50; backdrop-filter:blur(10px);
+    background:rgba(10,14,23,.7); border-bottom:1px solid var(--line)}
+  .nav-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; max-width:1080px; margin:0 auto}
+  .logo{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px}
+  .logo .bolt{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;
+    background:linear-gradient(135deg,var(--brand),var(--brand2)); box-shadow:0 6px 18px rgba(79,140,255,.35)}
+  .nav-links{display:flex; gap:22px; align-items:center}
+  .nav-links a{color:var(--muted); font-size:.95rem}
+  .nav-links a:hover{color:var(--text); text-decoration:none}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:12px;
+    font-weight:600; border:1px solid transparent; cursor:pointer; transition:.2s}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; box-shadow:0 8px 24px rgba(124,92,255,.35)}
+  .btn-primary:hover{filter:brightness(1.08); text-decoration:none}
+  .btn-ghost{background:transparent; border-color:var(--line); color:var(--text)}
+  .btn-ghost:hover{border-color:var(--brand); text-decoration:none}
+  @media (max-width:720px){.nav-links a:not(.btn){display:none}}
+
+  /* Hero */
+  .hero{padding:72px 0 40px; text-align:center}
+  .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+    background:rgba(34,211,238,.1); border:1px solid rgba(34,211,238,.3); color:var(--accent);
+    font-size:.82rem; font-weight:600; margin-bottom:22px}
+  .hero h1{font-size:clamp(2.2rem,6vw,4rem); line-height:1.05; margin:0 0 16px; letter-spacing:-1px}
+  .hero h1 .grad{background:linear-gradient(120deg,var(--brand),var(--brand2),var(--accent));
+    -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero p.lead{font-size:1.15rem; color:var(--muted); max-width:640px; margin:0 auto 30px}
+  .hero-cta{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+  .hero-img{margin:48px auto 0; max-width:900px}
+  .hero-img img{width:100%; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow)}
+
+  /* Banner disclaimer */
+  .legal-top{background:linear-gradient(90deg,rgba(255,84,112,.14),rgba(255,176,32,.12));
+    border:1px solid rgba(255,84,112,.35); border-radius:14px; padding:16px 20px; margin:28px auto 0;
+    display:flex; gap:14px; align-items:flex-start; max-width:900px}
+  .legal-top .ico{font-size:1.4rem; line-height:1}
+  .legal-top strong{color:#ffd0d8}
+  .legal-top span{color:var(--muted); font-size:.95rem}
+
+  /* Sections */
+  section{padding:64px 0}
+  .sec-head{text-align:center; max-width:640px; margin:0 auto 44px}
+  .sec-head .kicker{color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:2px; font-size:.8rem}
+  .sec-head h2{font-size:clamp(1.8rem,4vw,2.6rem); margin:8px 0 12px; letter-spacing:-.5px}
+  .sec-head p{color:var(--muted); margin:0}
+
+  /* Feature grid */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:26px;
+    transition:.25s; position:relative; overflow:hidden}
+  .card:hover{transform:translateY(-4px); border-color:rgba(79,140,255,.5); box-shadow:var(--shadow)}
+  .card .emoji{font-size:1.8rem; display:grid; place-items:center; width:52px; height:52px; border-radius:12px;
+    background:linear-gradient(135deg,rgba(79,140,255,.18),rgba(124,92,255,.18)); margin-bottom:16px}
+  .card h3{margin:0 0 8px; font-size:1.15rem}
+  .card p{margin:0; color:var(--muted); font-size:.95rem}
+
+  /* Steps */
+  .steps{display:grid; gap:18px; max-width:760px; margin:0 auto}
+  .step{display:flex; gap:18px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px}
+  .step .num{flex:none; width:38px; height:38px; border-radius:10px; display:grid; place-items:center; font-weight:700;
+    background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff}
+  .step h4{margin:0 0 4px}
+  .step p{margin:0; color:var(--muted); font-size:.95rem}
+
+  /* Code block */
+  .code{background:#070b13; border:1px solid var(--line); border-radius:14px; overflow:hidden; margin:22px auto 0; max-width:760px}
+  .code-bar{display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--line); background:#0b1120}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
+  .code-bar .fname{margin-left:8px; color:var(--muted); font-size:.85rem}
+  .code pre{margin:0; padding:20px; overflow-x:auto; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.9rem; color:#c9d6ee}
+  .code .cmt{color:#5b6b88}
+  .code .cmd{color:var(--accent)}
+
+  /* Requirements chips */
+  .chips{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:8px}
+  .chip{padding:8px 16px; border:1px solid var(--line); border-radius:999px; background:var(--card); font-size:.9rem; color:var(--muted)}
+  .chip b{color:var(--text)}
+
+  /* Legal section */
+  .legal{background:linear-gradient(180deg,rgba(255,84,112,.06),transparent); border:1px solid rgba(255,84,112,.3);
+    border-radius:var(--radius); padding:34px; max-width:820px; margin:0 auto}
+  .legal h2{margin-top:0; display:flex; align-items:center; gap:12px}
+  .legal ul{margin:14px 0 0; padding-left:22px; color:var(--muted)}
+  .legal li{margin:8px 0}
+  .legal li b{color:var(--text)}
+
+  /* Footer */
+  footer{border-top:1px solid var(--line); padding:36px 0; margin-top:40px}
+  .foot-inner{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; color:var(--muted); font-size:.9rem}
+  .foot-inner a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <div class="logo"><span class="bolt">⚡</span> Storm-Breaker</div>
+    <nav class="nav-links">
+      <a href="#features">Funcionalidades</a>
+      <a href="#how">Como funciona</a>
+      <a href="#install">Instalação</a>
+      <a href="#legal">Uso ético</a>
+      <a class="btn btn-primary" href="https://github.com/ultrasecurity/Storm-Breaker" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="pill">🛡️ Ferramenta de Pentest &amp; Red Team</span>
+    <h1>Testa a superfície de <span class="grad">engenharia social</span> das tuas equipas</h1>
+    <p class="lead">
+      Storm-Breaker é uma ferramenta de segurança ofensiva com painel web para demonstrar,
+      em ambientes autorizados, como páginas maliciosas podem solicitar informação de dispositivo,
+      localização, câmara e microfone. Esta página é a documentação do projeto.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#install">🚀 Como instalar</a>
+      <a class="btn btn-ghost" href="#legal">📜 Ler o aviso legal</a>
+    </div>
+
+    <div class="legal-top">
+      <span class="ico">⚠️</span>
+      <span><strong>Apenas para uso autorizado.</strong> Esta ferramenta destina-se a educação em segurança
+      e a testes de intrusão com consentimento explícito e por escrito. Utilizá-la contra pessoas ou
+      sistemas sem autorização é ilegal. Consulta a secção <a href="#legal">Uso ético</a>.</span>
+    </div>
+
+    <div class="hero-img">
+      <img src="assets/img/panel.jpeg" alt="Painel web do Storm-Breaker" loading="lazy" />
+    </div>
+  </section>
+
+  <section id="features" class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Capacidades</div>
+      <h2>O que a ferramenta demonstra</h2>
+      <p>Cada módulo ilustra um vetor de ataque comum de engenharia social, para que as equipas de defesa saibam o que procurar.</p>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="emoji">📱</div>
+        <h3>Informação do dispositivo</h3>
+        <p>Recolhe metadados de browser e sistema (user-agent, IP, bateria, etc.) sem pedir permissões especiais.</p>
+      </div>
+      <div class="card">
+        <div class="emoji">📍</div>
+        <h3>Localização (GPS)</h3>
+        <p>Demonstra como uma página pode pedir a geolocalização precisa em smartphones através da API do browser.</p>
+      </div>
+      <div class="card">
+        <div class="emoji">📷</div>
+        <h3>Acesso à câmara</h3>
+        <p>Mostra o risco de conceder permissões de câmara a páginas que se fazem passar por serviços legítimos.</p>
+      </div>
+      <div class="card">
+        <div class="emoji">🎙️</div>
+        <h3>Acesso ao microfone</h3>
+        <p>Ilustra a captura de áudio quando o utilizador autoriza o microfone sem verificar a origem.</p>
+      </div>
+      <div class="card">
+        <div class="emoji">🖥️</div>
+        <h3>Painel web</h3>
+        <p>Interface de administração para gerir templates, iniciar/parar o listener e consultar os registos.</p>
+      </div>
+      <div class="card">
+        <div class="emoji">🌐</div>
+        <h3>Host próprio ou local</h3>
+        <p>Pode correr em localhost (com SSL) ou num domínio/host pessoal, sem dependência de serviços externos.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" style="background:var(--bg2); border-top:1px solid var(--line); border-bottom:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="kicker">Fluxo</div>
+        <h2>Como funciona</h2>
+        <p>Um exercício de red team controlado, do lado do operador autorizado.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><div><h4>Configurar o painel</h4><p>Instalar as dependências e iniciar o painel web local com <code>python3 st.py</code>.</p></div></div>
+        <div class="step"><div class="num">2</div><div><h4>Escolher um template</h4><p>Selecionar o cenário de demonstração (dados de dispositivo, localização, câmara ou microfone).</p></div></div>
+        <div class="step"><div class="num">3</div><div><h4>Expor o serviço</h4><p>Disponibilizar o painel via túnel (ex. Ngrok) ou host próprio, sempre no âmbito de um teste autorizado.</p></div></div>
+        <div class="step"><div class="num">4</div><div><h4>Analisar os registos</h4><p>Rever os dados recolhidos no painel e produzir o relatório de sensibilização/segurança.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Setup</div>
+      <h2>Instalação</h2>
+      <p>Testado em Kali Linux, macOS, Termux (Android) e host pessoal (cPanel/admin direto).</p>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><b>php</b> 7.4+</span>
+      <span class="chip"><b>python</b> 3</span>
+      <span class="chip"><b>git</b></span>
+      <span class="chip"><b>Ngrok</b> (opcional)</span>
+      <span class="chip">requests · colorama · psutil</span>
+    </div>
+
+    <div class="code">
+      <div class="code-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="fname">terminal — Kali Linux</span></div>
+<pre><span class="cmt"># Clonar o repositório oficial</span>
+<span class="cmd">git clone</span> https://github.com/ultrasecurity/Storm-Breaker
+<span class="cmd">cd</span> Storm-Breaker
+
+<span class="cmt"># Instalar dependências</span>
+<span class="cmd">sudo bash</span> install.sh
+<span class="cmd">sudo python3 -m pip install</span> -r requirements.txt
+
+<span class="cmt"># Iniciar o painel web (credenciais por defeito: admin / admin)</span>
+<span class="cmd">sudo python3</span> st.py</pre>
+    </div>
+    <p style="text-align:center; color:var(--muted); margin-top:18px; font-size:.9rem">
+      💡 Muitas capacidades exigem <b>SSL</b> mesmo em localhost. Altera as credenciais por defeito em <code>config.php</code> antes de qualquer uso.
+    </p>
+  </section>
+
+  <section id="legal" class="wrap">
+    <div class="legal">
+      <h2>⚖️ Uso ético e legal</h2>
+      <p style="color:var(--muted); margin:0">
+        Storm-Breaker é uma ferramenta de <b>segurança ofensiva</b>. Existe para ajudar profissionais e estudantes
+        de segurança a compreender e defender-se de ataques de engenharia social. O seu uso implica responsabilidade.
+      </p>
+      <ul>
+        <li><b>Autorização obrigatória.</b> Usar apenas em sistemas e contra pessoas que deram consentimento explícito e por escrito (ex. contrato de pentest, laboratório próprio, CTF).</li>
+        <li><b>Nunca contra terceiros.</b> Recolher localização, câmara, microfone ou dados de alguém sem consentimento é ilegal na maioria das jurisdições e pode constituir crime.</li>
+        <li><b>Fins educativos e defensivos.</b> O objetivo é aumentar a consciência e melhorar as defesas, não causar dano.</li>
+        <li><b>Responsabilidade.</b> Quem usar a ferramenta é o único responsável pelo cumprimento das leis aplicáveis (ex. RGPD e legislação penal).</li>
+      </ul>
+      <p style="color:var(--muted); margin:16px 0 0; font-size:.9rem">
+        Esta página é documentação informativa. Não recolhe nem processa dados de visitantes.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>⚡ <b>Storm-Breaker</b> — página de documentação · apenas para uso autorizado.</div>
+    <div>
+      <a href="https://github.com/ultrasecurity/Storm-Breaker" target="_blank" rel="noopener">Repositório oficial ↗</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
