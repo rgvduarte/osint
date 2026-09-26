@@ -2,13 +2,26 @@
 // Tudo corre no browser; a selfie nunca sai do dispositivo.
 
 const FACEAPI_VERSION = '1.7.15';
+const TFJS_VERSION = '4.22.0'; // versão do TensorFlow.js incluída no face-api
 const CDN = `https://cdn.jsdelivr.net/npm/@vladmandic/face-api@${FACEAPI_VERSION}`;
+const WASM_CDN = `https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@${TFJS_VERSION}/dist/`;
 const INDEX_URL = 'data/faces.json';
+
+// No Safari (sobretudo iPhone) o motor WebGL do TensorFlow.js pode bloquear na primeira análise.
+// Aí o WebAssembly é o mais fiável; nos outros browsers o WebGL é mais rápido.
+const APPLE_WEBKIT = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  || /^((?!chrome|chromium|crios|fxios|android|edg).)*safari/i.test(navigator.userAgent);
+const BACKENDS = APPLE_WEBKIT ? ['wasm', 'webgl', 'cpu'] : ['webgl', 'wasm', 'cpu'];
+const WARMUP_MS = { webgl: 25_000, wasm: 25_000, cpu: 60_000 };
+const DETECT_MS = 30_000;
+const MAX_SELFIE_SIDE = 960;
 
 const $ = (id) => document.getElementById(id);
 const els = {
   indexStatus: $('indexStatus'), video: $('video'), startCam: $('startCam'), cameraIdle: $('cameraIdle'),
   snap: $('snap'), fileInput: $('fileInput'), clues: $('clues'), clueRow: $('clueRow'), captureMsg: $('captureMsg'),
+  engineMsg: $('engineMsg'),
   resultsCard: $('resultsCard'), resultsTitle: $('resultsTitle'), resultsMsg: $('resultsMsg'), grid: $('grid'),
   threshold: $('threshold'), lightbox: $('lightbox'), lbImg: $('lbImg'), lbBox: $('lbBox'), lbInfo: $('lbInfo'),
   lbOpen: $('lbOpen'), lbClose: $('lbClose'), lbImgWrap: $('lbImgWrap'),
@@ -23,22 +36,78 @@ const state = {
 
 let faceapi = null;
 let modelsReady = null;
+let backendIdx = -1;
 
-// ---------------------------------------------------------------- arranque
+// ---------------------------------------------------------------- motor de IA
+
+const withTimeout = (promise, ms, what) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error(`${what} demorou demasiado`)), ms)),
+]);
+
+const engine = (text) => { els.engineMsg.textContent = text; };
 
 function loadModels() {
-  modelsReady ??= (async () => {
+  modelsReady ??= resetOnFail((async () => {
+    engine('A acordar o inspector…');
     faceapi = await import(`${CDN}/dist/face-api.esm.js`);
-    try { await faceapi.tf.setBackend('webgl'); } catch { await faceapi.tf.setBackend('cpu'); }
-    await faceapi.tf.ready();
-    const url = `${CDN}/model`;
-    await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(url),
-      faceapi.nets.faceLandmark68Net.loadFromUri(url),
-      faceapi.nets.faceRecognitionNet.loadFromUri(url),
-    ]);
-  })();
+    faceapi.tf.setWasmPaths(WASM_CDN);
+    return nextBackend();
+  })());
   return modelsReady;
+}
+
+// Se nenhum motor arrancar, deixa tentar outra vez do zero no próximo clique.
+function resetOnFail(promise) {
+  return promise.catch((e) => {
+    modelsReady = null;
+    backendIdx = -1;
+    engine(`O inspector não arrancou neste browser (${e.message}).`);
+    throw e;
+  });
+}
+
+// Passa ao motor seguinte da lista, recarrega os modelos nele e faz um aquecimento com tempo limite.
+async function nextBackend() {
+  while (++backendIdx < BACKENDS.length) {
+    const name = BACKENDS[backendIdx];
+    try {
+      if (!(await withTimeout(faceapi.tf.setBackend(name), 20_000, name))) continue;
+      await faceapi.tf.ready();
+      const nets = [faceapi.nets.ssdMobilenetv1, faceapi.nets.faceLandmark68Net, faceapi.nets.faceRecognitionNet];
+      for (const net of nets) if (net.isLoaded) net.dispose();
+      engine('A descarregar os modelos (≈12 MB, só da primeira vez)…');
+      await Promise.all(nets.map((net) => net.loadFromUri(`${CDN}/model`)));
+      engine('A afinar a lupa…');
+      const blank = document.createElement('canvas');
+      blank.width = blank.height = 160;
+      await withTimeout(runDetection(blank), WARMUP_MS[name], 'O aquecimento');
+      engine(`Inspector pronto (${name}).`);
+      return name;
+    } catch (e) {
+      console.warn(`motor ${name} falhou:`, e);
+    }
+  }
+  throw new Error('nenhum motor funcionou');
+}
+
+function runDetection(canvas) {
+  const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 });
+  return faceapi.detectAllFaces(canvas, opts).withFaceLandmarks().withFaceDescriptors();
+}
+
+// Deteção com tempo limite: se o motor atual encravar, muda para o seguinte e tenta outra vez.
+async function detectWithFallback(canvas) {
+  await loadModels();
+  try {
+    return await withTimeout(runDetection(canvas), DETECT_MS, 'A análise');
+  } catch (e) {
+    console.warn(e);
+    engine('A trocar de lupa…');
+    modelsReady = resetOnFail(nextBackend());
+    await modelsReady;
+    return withTimeout(runDetection(canvas), DETECT_MS, 'A análise');
+  }
 }
 
 async function loadIndex() {
@@ -80,28 +149,37 @@ async function startCamera() {
     await els.video.play();
     els.cameraIdle.hidden = true;
     els.snap.hidden = false;
-    setMsg(els.captureMsg, 'Enquadra a cara no oval, com boa luz, e tira a selfie.');
+    setMsg(els.captureMsg, 'Cara no oval, boa luz, sem óculos de sol. O inspector agradece.');
   } catch (e) {
-    setMsg(els.captureMsg, 'Sem acesso à câmara. Usa “Carregar foto” para escolher uma selfie.', true);
+    setMsg(els.captureMsg, 'Sem acesso à câmara. Usa “Escolher foto”: também dá para tirar uma selfie aí.', true);
   }
   loadModels().catch(() => {});
 }
 
-function snapFromVideo() {
-  const v = els.video;
+// Numa selfie a cara é grande: reduzir a imagem acelera muito a análise no telemóvel.
+function toCanvas(source, w, h) {
+  const scale = Math.min(1, MAX_SELFIE_SIDE / Math.max(w, h));
   const c = document.createElement('canvas');
-  c.width = v.videoWidth; c.height = v.videoHeight;
-  c.getContext('2d').drawImage(v, 0, 0);
+  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
   return c;
 }
 
+function snapFromVideo() {
+  return toCanvas(els.video, els.video.videoWidth, els.video.videoHeight);
+}
+
 async function fileToCanvas(file) {
-  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  return c;
+  // <img> respeita a orientação EXIF em todos os browsers atuais, incluindo Safari.
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return toCanvas(img, img.naturalWidth, img.naturalHeight);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 // ---------------------------------------------------------------- pistas (selfies)
@@ -111,14 +189,12 @@ async function addClue(canvas) {
     setMsg(els.captureMsg, 'O arquivo de caras ainda não está disponível.', true);
     return;
   }
-  setMsg(els.captureMsg, 'O inspector está a examinar a tua cara…');
+  setMsg(els.captureMsg, 'O inspector está a examinar o suspeito…');
   els.snap.disabled = true;
   try {
-    await loadModels();
-    const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 });
-    const found = await faceapi.detectAllFaces(canvas, opts).withFaceLandmarks().withFaceDescriptors();
+    const found = await detectWithFallback(canvas);
     if (!found.length) {
-      setMsg(els.captureMsg, 'Não encontrei nenhuma cara. Tenta com mais luz e a cara de frente.', true);
+      setMsg(els.captureMsg, 'Nem sinal de cara. Tenta com mais luz e de frente para a câmara.', true);
       return;
     }
     // Na selfie, a cara que interessa é a maior.
@@ -126,8 +202,8 @@ async function addClue(canvas) {
     state.refs.push(main.descriptor);
     renderClue(canvas, main.detection.box);
     setMsg(els.captureMsg, found.length > 1
-      ? 'Apareceu mais do que uma cara — usei a maior.'
-      : 'Pista registada. Podes juntar outra selfie para afinar a busca.');
+      ? 'Apanhei mais do que uma cara: fiquei com a maior.'
+      : 'Prova registada. Junta outra selfie, de outro ângulo, para afinar a busca.');
     search();
   } catch (e) {
     console.error(e);
@@ -193,10 +269,11 @@ function renderResults() {
   const t = +els.threshold.value;
   const hits = state.matches.filter((m) => m.dist <= t);
   els.resultsCard.hidden = false;
-  els.resultsTitle.textContent = hits.length === 1 ? '1 foto encontrada' : `${hits.length} fotos encontradas`;
+  els.resultsTitle.textContent = hits.length === 0 ? 'Sem provas'
+    : hits.length === 1 ? 'Caso resolvido: 1 foto' : `Caso resolvido: ${hits.length} fotos`;
   setMsg(els.resultsMsg, hits.length
-    ? 'Toca numa foto para a ver maior. Se faltarem fotos, puxa o rigor para “Mais fotos”.'
-    : 'Nenhuma foto com este rigor. Puxa para “Mais fotos” ou junta outra selfie.');
+    ? 'Toca numa foto para a ver em grande. Faltam fotos? Puxa o cursor para “Mais fotos”.'
+    : 'Nada com este rigor. Puxa o cursor para “Mais fotos” ou junta outra selfie.');
   els.grid.replaceChildren(...hits.map(renderCard));
 }
 
@@ -257,3 +334,5 @@ els.lbClose.addEventListener('click', () => els.lightbox.close());
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
 
 loadIndex();
+// Adianta o download dos modelos enquanto o convidado lê a página.
+setTimeout(() => loadModels().catch(() => {}), 1500);
