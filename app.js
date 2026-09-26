@@ -905,6 +905,7 @@ function toggleMenu(open = els.menuList.hidden) {
 function openDossie(d) {
   if (d.action === 'ressaca') return ressaca();
   if (d.action === 'wanted') return showWanted(d.text);
+  if (d.action === 'jogo') return document.getElementById('jogo').scrollIntoView({ behavior: 'smooth' });
   els.pageTab.textContent = d.tab || 'Dossiê';
   els.pageTitle.textContent = d.title || d.label;
   els.pageBody.innerHTML = d.html; // conteúdo fixo do próprio site (dossies.js)
@@ -963,6 +964,10 @@ document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
+
+$('regrasBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento')));
+// O jogo vive à parte: se falhar, a pesquisa de fotos continua a funcionar.
+import('./jogo.js').then((m) => m.initJogo($('jogo'))).catch((e) => console.warn('jogo:', e));
 
 loadIndex();
 els.hatHint.hidden = found.has('hat');

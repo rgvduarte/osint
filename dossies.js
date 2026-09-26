@@ -1,6 +1,10 @@
 // Conteúdo do menu "Dossiês" (texto fixo do site).
 // Escrito por 4 "escritores" com ângulos diferentes, avaliado por um júri e verificado contra factos
 // inventados; só usa factos reais (números do índice, fotos dadas pelo inspector).
+import { TEXTOS } from './jogo-textos.js';
+
+const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 export const DOSSIES = [
   {
     "id": "sobre",
@@ -58,5 +62,19 @@ export const DOSSIES = [
     "emoji": "🥴",
     "label": "Modo ressaca",
     "action": "ressaca"
+  },
+  {
+    id: 'jogo',
+    emoji: '🍾',
+    label: `Jogar: ${TEXTOS.nome_jogo}`,
+    action: 'jogo'
+  },
+  {
+    id: 'regulamento',
+    emoji: '🏆',
+    label: 'Regulamento do passatempo',
+    tab: 'Passatempo',
+    title: 'Regulamento do passatempo',
+    html: TEXTOS.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
   }
 ];

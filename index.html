@@ -117,6 +117,42 @@
         <div class="grid" id="maybeGrid" hidden></div>
       </div>
     </section>
+
+    <section class="jogo" id="jogo" aria-labelledby="jogoTitulo">
+      <span class="tab">Passatempo</span>
+      <span class="prize" aria-hidden="true">Prémio:<br>1 garrafa<br>de queijo</span>
+      <div class="pt-intro">
+        <img class="pt-face" src="assets/inspector-peek.jpg" alt="O Inspector Xinxers">
+        <h2 class="pt-title" id="jogoTitulo" data-t="passatempo_titulo"></h2>
+      </div>
+      <p class="pt-text" data-t="passatempo_texto"></p>
+
+      <div class="arcade">
+        <span class="plate" data-t="nome_jogo"></span>
+        <div class="screen">
+          <canvas width="360" height="540" aria-label="Jogo: toca no ecrã para o noivo voar entre as garrafas"></canvas>
+          <div class="over" data-over hidden>
+            <p class="over-title" data-over-title></p>
+            <p class="over-text" data-over-text></p>
+            <label class="over-name">O teu nome
+              <input data-name maxlength="20" autocomplete="nickname" enterkeyhint="send" placeholder="Nome e apelido">
+            </label>
+            <button class="btn" data-submit>Entrar no leaderboard</button>
+            <button class="text-btn light" data-again>Outra vez!</button>
+          </div>
+        </div>
+        <p class="fine arcade-help">Toca no ecrã (ou carrega no espaço) para voar. Foge das garrafas, apanha os presentes.</p>
+      </div>
+
+      <ul class="powers" data-powers aria-label="Power-ups"></ul>
+
+      <div class="board">
+        <h3>Leaderboard</h3>
+        <ol data-board></ol>
+        <p class="fine" data-board-note></p>
+        <button class="text-btn" id="regrasBtn">Regulamento do passatempo</button>
+      </div>
+    </section>
   </main>
 
   <dialog id="lightbox">
