@@ -84,7 +84,7 @@ export function unpack(json) {
   };
 }
 
-function quantize(d) {
+export function quantize(d) {
   let max = 0;
   for (const x of d) max = Math.max(max, Math.abs(x));
   const scale = max / 127 || 1;

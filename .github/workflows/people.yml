@@ -1,0 +1,36 @@
+name: Analisar pessoas
+
+# Agrupa as caras do índice por pessoa e mostra quem aparece em mais fotos, com género/idade
+# estimados em algumas fotos de cada pessoa. Só lê; não faz commit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      top:
+        description: 'Quantas pessoas mostrar'
+        required: false
+        default: '8'
+
+permissions:
+  contents: read
+
+jobs:
+  people:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: indexer/package-lock.json
+      - run: npm ci
+      - name: Relatório
+        env:
+          AGE_GENDER: '1'
+          TOP: ${{ inputs.top }}
+        run: node people.mjs
