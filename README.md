@@ -45,16 +45,16 @@ URLS_FILE=urls.txt node build-index.mjs
 GALLERY_URL='https://…' GALLERY_PASSWORD='…' node build-index.mjs
 ```
 
-Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o formato do índice mudar, `node repack.mjs` converte o `data/faces.json` existente sem voltar a indexar.
+Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o formato do índice mudar, `node repack.mjs` converte o `data/index-arc.json` existente sem voltar a indexar.
 
 ## Como decide quem és
 
-- Cada cara da galeria é um vetor de 128 números (face-api). Numa galeria de milhares de caras, a distância pura dá muitos falsos positivos: quem tem uma cara "genérica" fica perto de muita gente.
-- Por isso a pontuação é **S-norm**: a distância entre a selfie e uma cara é comparada com o quanto ambas costumam estar perto de caras ao acaso. As estatísticas de cada cara da galeria vêm calculadas no índice (`indexer/format.mjs`).
-- As caras acima do rigor do cursor são **sementes**. A partir delas, a app junta as outras fotos da mesma pessoa pela semelhança **entre fotos da galeria** (mesma câmara, mesmo dia, mesma luz), desde que a selfie também se pareça com elas.
-- Não há cursor: a app usa sempre o limiar de **máximo de fotos** (S-norm 3,5), com as mais prováveis primeiro e marcadas "ÉS TU!" / "PROVÁVEL" / "TALVEZ".
-- Medido no índice real (1.788 fotos, 8.750 caras): encontra ~97% das fotos de quem aparece em 5+ fotos; quem não estava no casamento vê em média 1 foto errada (máximo 14 em 24 caras testadas). Descer o limiar para 3,0 só daria 99% com o triplo das fotos erradas.
-- Juntar 2–3 selfies com ângulos diferentes ajuda: cada cara conta pela selfie com que melhor pontua.
+- **Reconhecimento ArcFace** (InsightFace `w600k_mbf`, 512 dimensões), a correr no telemóvel com ONNX Runtime Web. O face-api só deteta as caras e os 68 pontos. Com 5 desses pontos, a cara é alinhada ao molde 112×112 do ArcFace (`arcface.js`, o mesmo código no indexador e na app). O descritor é a média da cara com a sua versão espelhada.
+- Medido no índice real (1.788 fotos, 8.750 caras): entre caras de pessoas diferentes **na mesma foto** (familiares incluídos), só ~1% ficam a distância < 1,05; com o modelo antigo (dlib) eram 2–6% nos limiares usados. As caras de 24 pessoas que não estavam no casamento ficam todas a ≥ 1,10 de qualquer cara da galeria.
+- **Sementes + expansão pela média:** as caras a < 1,05 da selfie são sementes. A pesquisa repete-se com a média da selfie e das melhores sementes, que é a cara tal como aparece nas fotos do casamento, e isso apanha fotos de lado e em movimento. O noivo passa de ~250 para ~495 fotos, a noiva de ~245 para ~500, e nenhuma cara é trocada entre os dois.
+- **Calibração por pessoa:** algumas caras caem num "hub", uma zona onde muita gente se parece. Uma pessoa só aparece uma vez em cada foto, por isso a app conta as fotos em que "tu" aparecerias duas vezes e aperta o limiar até esses conflitos ficarem ≤ 5%. Em média ficam em 1,2%, contra 15% sem calibração, sem perder recall nos restantes. O que fica de fora vai para "Talvez também sejas tu" (as 60 mais parecidas).
+- As caras pequenas (< 60px) têm um limiar 0,10 mais apertado, e a média só usa caras ≥ 80px.
+- Juntar 2–3 selfies com ângulos diferentes ajuda.
 
 ## Descarregar as provas
 
