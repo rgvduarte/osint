@@ -118,8 +118,8 @@ async function loadIndex() {
     const res = await fetch(INDEX_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
-    const faces = raw.faces.map((f) => ({ p: f.p, b: f.b, d: decodeDescriptor(f.d) }));
-    state.index = { photos: raw.photos, faces, generatedAt: raw.generatedAt };
+    const { photos, faces } = unpackIndex(raw);
+    state.index = { photos, faces, generatedAt: raw.generatedAt };
     if (!raw.photos.length) {
       els.indexStatus.textContent = 'Arquivo vazio: falta revelar o rolo.';
       els.indexStatus.classList.add('warn');
@@ -139,6 +139,25 @@ async function loadInspector() {
     const res = await fetch('data/inspector.json');
     if (res.ok) state.inspector = decodeDescriptor((await res.json()).d);
   } catch {}
+}
+
+// Formato do índice: ver indexer/format.mjs (v2 compacto; v1 ainda aceite).
+function unpackIndex(raw) {
+  if (raw.version === 2) {
+    const base = raw.base || '';
+    return {
+      photos: raw.photos.map(([s, f, w, h, t]) => ({ s: base + s, f: base + (f || s), w, h, t })),
+      faces: raw.faces.map(([p, x, y, w, h, scale, q, mu, sd]) => ({ p, b: [x, y, w, h], d: decodeInt8(q, scale), mu, sd })),
+    };
+  }
+  return { photos: raw.photos, faces: raw.faces.map((f) => ({ p: f.p, b: f.b, d: decodeDescriptor(f.d) })) };
+}
+
+function decodeInt8(b64, scale) {
+  const bin = atob(b64);
+  const d = new Float32Array(bin.length);
+  for (let i = 0; i < bin.length; i++) d[i] = ((bin.charCodeAt(i) << 24) >> 24) * scale;
+  return d;
 }
 
 function decodeDescriptor(b64) {
@@ -220,9 +239,9 @@ async function addClue(canvas) {
       ? 'Apareceu mais do que uma cara: fiquei com a maior.'
       : 'Registado. Outra selfie, de outro ângulo, afina a busca.');
     search();
-    const caught = state.matches.some((m) => m.dist < 0.42);
+    const caught = collect(+els.threshold.value).some((m) => m.kind === 'seed');
     peek.done(caught ? 'Apanhado!' : 'Hmm… nada por agora.');
-    if (state.inspector && distance(main.descriptor, state.inspector) < 0.5) {
+    if (state.inspector && distance(main.descriptor, state.inspector) < 0.44) {
       setTimeout(() => showWanted('Alto! Não te podes investigar a ti próprio, Inspector. Mas pronto, as tuas fotos estão aí em baixo.'), 900);
     }
   } catch (e) {
@@ -270,37 +289,89 @@ function distance(a, b) {
   return Math.sqrt(s);
 }
 
+// ---- Pontuação
+// Distância pura não chega numa galeria de milhares de caras: quem tem uma cara "genérica"
+// fica perto de muita gente. Usa-se S-norm: a distância é comparada com o quanto a selfie e
+// cada cara da galeria costumam estar perto de caras ao acaso (coorte fixa da galeria; μ/σ
+// de cada cara vêm calculados no índice, ver indexer/format.mjs).
+const COHORT_SIZE = 800;
+const COHORT_TOP = 200;
+// Sementes: caras com pontuação acima do rigor do cursor. Expansão: outras fotos da mesma
+// pessoa, reconhecidas pela semelhança entre fotos da galeria (mesma câmara, mesma luz),
+// desde que a selfie também se pareça com elas (rigor - EXPAND_MARGIN).
+const EXPAND_MARGIN = 1.5;
+const LINK_DIST = 0.38;
+const SURE_SCORE = 5.5;
+
+function cohortStats(d) {
+  const faces = state.index.faces;
+  const step = Math.max(1, Math.floor(faces.length / COHORT_SIZE));
+  const ds = [];
+  for (let i = 0; i < faces.length; i += step) {
+    const x = distance(d, faces[i].d);
+    if (x > 1e-6) ds.push(x);
+  }
+  ds.sort((a, b) => a - b);
+  const top = ds.slice(0, COHORT_TOP);
+  const mean = top.reduce((s, x) => s + x, 0) / top.length;
+  const sd = Math.sqrt(top.reduce((s, x) => s + (x - mean) ** 2, 0) / top.length) || 1;
+  return [mean, sd];
+}
+
 function search() {
   if (!state.refs.length) { els.resultsCard.hidden = true; return; }
   const firstTime = els.resultsCard.hidden;
-  const best = new Map(); // photo index -> {face, dist}
-  for (const face of state.index.faces) {
-    let d = Infinity;
-    for (const r of state.refs) d = Math.min(d, distance(r, face.d));
-    const cur = best.get(face.p);
-    if (!cur || d < cur.dist) best.set(face.p, { face, dist: d });
+  const faces = state.index.faces;
+  const scores = new Float32Array(faces.length).fill(-Infinity);
+  for (const r of state.refs) {
+    const [qm, qs] = cohortStats(r);
+    for (let i = 0; i < faces.length; i++) {
+      const f = faces[i];
+      const d = distance(r, f.d);
+      const s = f.mu ? 0.5 * ((f.mu - d) / f.sd + (qm - d) / qs) : (qm - d) / qs;
+      if (s > scores[i]) scores[i] = s;
+    }
   }
-  state.matches = [...best.entries()]
-    .map(([p, m]) => ({ photo: state.index.photos[p], ...m }))
-    .sort((a, b) => a.dist - b.dist);
+  state.scores = scores;
   renderResults();
   if (firstTime) els.resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function verdict(d) {
-  if (d < 0.42) return { label: 'ÉS TU!', cls: 'high' };
-  if (d < 0.50) return { label: 'PROVÁVEL', cls: 'mid' };
+// Fotos encontradas com o rigor t: uma entrada por foto, com a cara mais convincente.
+function collect(t) {
+  const { faces, photos } = state.index;
+  const sc = state.scores;
+  const seeds = [];
+  for (let i = 0; i < faces.length; i++) if (sc[i] >= t) seeds.push(i);
+  const best = new Map();
+  const take = (i, kind) => {
+    const cur = best.get(faces[i].p);
+    if (!cur || sc[i] > cur.score) best.set(faces[i].p, { face: faces[i], score: sc[i], kind, photo: photos[faces[i].p] });
+  };
+  for (const i of seeds) take(i, 'seed');
+  const gate = t - EXPAND_MARGIN;
+  for (let h = 0; h < faces.length; h++) {
+    if (sc[h] < gate || sc[h] >= t || best.has(faces[h].p)) continue;
+    for (const s of seeds) {
+      if (faces[s].p !== faces[h].p && distance(faces[s].d, faces[h].d) < LINK_DIST) { take(h, 'link'); break; }
+    }
+  }
+  return [...best.values()].sort((a, b) => b.score - a.score);
+}
+
+function verdict(m) {
+  if (m.kind === 'seed' && m.score >= SURE_SCORE) return { label: 'ÉS TU!', cls: 'high' };
+  if (m.kind === 'seed') return { label: 'PROVÁVEL', cls: 'mid' };
   return { label: 'TALVEZ', cls: 'low' };
 }
 
 function renderResults() {
-  const t = +els.threshold.value;
-  const hits = state.matches.filter((m) => m.dist <= t);
+  const hits = collect(+els.threshold.value);
   els.resultsCard.hidden = false;
   els.resultsTitle.textContent = hits.length;
   setMsg(els.resultsMsg, hits.length
-    ? 'Toca num fotograma para o ver maior. Faltam fotos? Alarga a lupa para “mais fotos”.'
-    : 'Nada marcado. Alarga a lupa para “mais fotos” ou tira outra selfie.');
+    ? 'Toca num fotograma para o ver maior. Faltam fotos? Puxa a lupa para “mais fotos”.'
+    : 'Nada marcado. Puxa a lupa para “mais fotos” ou tira outra selfie.');
   els.grid.replaceChildren(...hits.map(renderCard));
 }
 
@@ -339,7 +410,7 @@ function mark(photo, box, cls, cellRatio = null) {
 const frameNo = (m) => String(m.face.p + 1).padStart(3, '0');
 
 function renderCard(m) {
-  const v = verdict(m.dist);
+  const v = verdict(m);
   const frame = document.createElement('button');
   frame.className = 'frame';
   const cell = document.createElement('div');
@@ -363,7 +434,7 @@ function renderCard(m) {
 // ---------------------------------------------------------------- lupa
 
 function openLightbox(m) {
-  const v = verdict(m.dist);
+  const v = verdict(m);
   els.lbImgWrap.style.setProperty('--r', m.photo.w / m.photo.h);
   els.lbImg.src = m.photo.t || m.photo.s;
   // Carrega a versão maior por cima, se existir.
@@ -373,7 +444,7 @@ function openLightbox(m) {
     big.src = m.photo.f;
   }
   els.lbBox.replaceChildren(mark(m.photo, m.face.b, v.cls));
-  els.lbInfo.textContent = `▸ FOTOGRAMA ${frameNo(m)} · ${v.label} · ${Math.round(Math.max(0, 1 - m.dist) * 100)}% PARECIDO`;
+  els.lbInfo.textContent = `▸ FOTOGRAMA ${frameNo(m)} · ${v.label}`;
   els.lbOpen.href = m.photo.f || m.photo.s;
   els.lightbox.showModal();
 }

@@ -45,13 +45,16 @@ URLS_FILE=urls.txt node build-index.mjs
 GALLERY_URL='https://…' GALLERY_PASSWORD='…' node build-index.mjs
 ```
 
-Todas as opções estão documentadas no topo de `indexer/build-index.mjs`.
+Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o formato do índice mudar, `node repack.mjs` converte o `data/faces.json` existente sem voltar a indexar.
 
-## Afinar resultados
+## Como decide quem és
 
-- O cursor **Mais fotos ↔ Mais certeza** controla a distância máxima entre caras (0,40–0,65; por defeito 0,52).
-- Juntar 2–3 selfies com ângulos diferentes melhora bastante os resultados. Cada foto conta pela selfie que lhe estiver mais próxima.
-- Caras muito pequenas (menos de 36 px), de perfil ou tapadas podem escapar. Numa foto de grupo grande, o indexador também analisa cada quadrante para apanhar caras pequenas.
+- Cada cara da galeria é um vetor de 128 números (face-api). Numa galeria de milhares de caras, a distância pura dá muitos falsos positivos: quem tem uma cara "genérica" fica perto de muita gente.
+- Por isso a pontuação é **S-norm**: a distância entre a selfie e uma cara é comparada com o quanto ambas costumam estar perto de caras ao acaso. As estatísticas de cada cara da galeria vêm calculadas no índice (`indexer/format.mjs`).
+- As caras acima do rigor do cursor são **sementes**. A partir delas, a app junta as outras fotos da mesma pessoa pela semelhança **entre fotos da galeria** (mesma câmara, mesmo dia, mesma luz), desde que a selfie também se pareça com elas.
+- Medido no índice real (1.788 fotos, 8.750 caras): com o cursor no meio encontra ~82% das fotos de quem aparece em 5+ fotos; 24 caras de pessoas que não estavam no casamento recebem no total ~15 fotos erradas, no máximo 5 cada (antes: centenas só para uma delas).
+- Juntar 2–3 selfies com ângulos diferentes ajuda: cada cara conta pela selfie com que melhor pontua.
+- O cursor vai de **mais fotos** (3,5) a **mais certeza** (5,5); por defeito 4,5.
 
 ## Privacidade: lê isto antes de publicar
 
