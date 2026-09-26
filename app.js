@@ -184,8 +184,8 @@ async function loadInspector() {
 }
 
 // É o noivo? Média das 10 caras de referência mais próximas (ver indexer/people.mjs).
-// Calibrado no índice real: outras fotos do noivo ~0,32; noiva e família ≥ 0,57; gente de fora ≥ 0,70.
-const GROOM_DIST = 0.46;
+// Calibrado no índice real (ArcFace): fotos do noivo p99 1,10; noiva ≥ 1,31; outros convidados ≥ 1,19; gente de fora ≥ 1,30.
+const GROOM_DIST = 1.15;
 function isGroom(d) {
   if (!state.groom) return false;
   const ds = state.groom.map((g) => distance(d, g)).sort((a, b) => a - b).slice(0, 10);
@@ -198,7 +198,7 @@ function unpackIndex(raw) {
     const base = raw.base || '';
     return {
       photos: raw.photos.map(([s, f, w, h, t]) => ({ s: base + s, f: base + (f || s), w, h, t })),
-      faces: raw.faces.map(([p, x, y, w, h, scale, q, mu, sd]) => ({ p, b: [x, y, w, h], d: decodeInt8(q, scale), mu, sd })),
+      faces: raw.faces.map(([p, x, y, w, h, scale, q]) => ({ p, b: [x, y, w, h], d: decodeInt8(q, scale), px: w * raw.photos[p][2] })),
     };
   }
   return { photos: raw.photos, faces: raw.faces.map((f) => ({ p: f.p, b: f.b, d: decodeDescriptor(f.d) })) };
@@ -301,9 +301,9 @@ async function addClue(canvas) {
       setMsg(els.captureMsg, `Estás em ${hits.length} fotos. Ou és a noiva, ou tens um talento raro para aparecer.`);
       peek.done('Celebridade!');
     } else {
-      peek.done(hits.some((m) => m.score >= LIKELY_SCORE) ? 'Apanhado!' : hits.length ? 'Hmm… talvez.' : 'Nada… por agora.');
+      peek.done(hits.some((m) => verdict(m).cls !== 'low') ? 'Apanhado!' : hits.length ? 'Hmm… talvez.' : 'Nada… por agora.');
     }
-    if (!groom && state.inspector && distance(main.descriptor, state.inspector) < 0.44) {
+    if (!groom && state.inspector && distance(main.descriptor, state.inspector) < 1.12) {
       setTimeout(() => showWanted('Alto! Não te podes investigar a ti próprio, Inspector. Mas pronto, as tuas fotos estão aí em baixo.'), 900);
     }
   } catch (e) {
@@ -352,80 +352,120 @@ function distance(a, b) {
   return Math.sqrt(s);
 }
 
-// ---- Pontuação
-// Distância pura não chega numa galeria de milhares de caras: quem tem uma cara "genérica"
-// fica perto de muita gente. Usa-se S-norm: a distância é comparada com o quanto a selfie e
-// cada cara da galeria costumam estar perto de caras ao acaso (coorte fixa da galeria; μ/σ
-// de cada cara vêm calculados no índice, ver indexer/format.mjs).
-const COHORT_SIZE = 800;
-const COHORT_TOP = 200;
-// Sementes: caras com pontuação acima do rigor do cursor. Expansão: outras fotos da mesma
-// pessoa, reconhecidas pela semelhança entre fotos da galeria (mesma câmara, mesma luz),
-// desde que a selfie também se pareça com elas (rigor - EXPAND_MARGIN).
-const EXPAND_MARGIN = 2.5;
-const LINK_DIST = 0.38;
-const SURE_SCORE = 5.5;
-const LIKELY_SCORE = 4.5;
-// Rigor fixo no ponto de "máximo de fotos": ~97% das fotos de cada pessoa, à custa de
-// algumas fotos erradas no fim da lista (as mais prováveis aparecem primeiro).
-const THRESHOLD = 3.5;
-// Abaixo do limiar ainda há fotos possíveis: ficam numa secção à parte, atrás de um botão.
-const MAYBE_THRESHOLD = 2.5;
+// ---- Pesquisa (ArcFace)
+// Medido no índice real (1.788 fotos, 8.750 caras):
+// - entre caras de pessoas diferentes na mesma foto (familiares incluídos), só ~1% ficam a < 1,05;
+//   as 24 caras de pessoas de fora ficam todas a ≥ 1,10 de qualquer cara da galeria;
+// - sementes (caras a < 1,05 da selfie) + expansão pela média (a pesquisa repete-se com a média
+//   da selfie e das melhores sementes, i.e. a cara tal como aparece nas fotos do casamento):
+//   apanha fotos de lado e em movimento; recall mediano ~94%;
+// - algumas caras caem num "hub" (zona onde muita gente se parece): aí a mesma pessoa aparecia
+//   2 vezes na mesma foto em 15% das fotos. Uma pessoa só aparece uma vez por foto, por isso a
+//   app mede esses conflitos e aperta o limiar até ficarem ≤ 5% (1,2% em média, noivos intactos).
+//   O que fica de fora vai para "talvez também sejas tu".
+const SEED_DIST = 1.05;
+const LEVELS = [
+  { direct: 1.05, t2: 1.05 },
+  { direct: 1.0, t2: 1.0 },
+  { direct: 0.95, t2: 0.95 },
+  { direct: 0.95, t2: 0.9 },
+  { direct: 0.9, t2: 0.85 },
+];
+const MAX_CONFLICTS = 0.05;
+const SMALL_PX = 60;          // caras pequenas têm descritores menos fiáveis: limiar 0,10 mais apertado
+const SMALL_PENALTY = 0.10;
+const GOOD_PX = 80;           // a média usa caras com boa resolução
+const AQE_TOP = 10;
+const AQE_ITERS = 2;
+const MAYBE_DIST = 1.15;
+const MAYBE_MAX = 60;
+const THRESHOLD = 'principal';
+const MAYBE_THRESHOLD = 'talvez';
+const SURE_DIST = 0.85;
+const LIKELY_DIST = 1.0;
 const CELEBRITY = 250;
 
-function cohortStats(d) {
+const normalize = (v) => {
+  let n = 0;
+  for (const x of v) n += x * x;
+  n = Math.sqrt(n) || 1;
+  return v.map((x) => x / n);
+};
+
+// Uma passagem com um nível de rigor: devolve Map(índice da cara -> distância).
+function runLevel(dq, level) {
   const faces = state.index.faces;
-  const step = Math.max(1, Math.floor(faces.length / COHORT_SIZE));
-  const ds = [];
-  for (let i = 0; i < faces.length; i += step) {
-    const x = distance(d, faces[i].d);
-    if (x > 1e-6) ds.push(x);
+  const lim = (i, t) => (faces[i].px < SMALL_PX ? t - SMALL_PENALTY : t);
+  const seeds = [];
+  for (let i = 0; i < faces.length; i++) if (dq[i] < lim(i, SEED_DIST)) seeds.push(i);
+  const found = new Map();
+  if (!seeds.length) return found;
+  for (const i of seeds) if (dq[i] < lim(i, level.direct)) found.set(i, dq[i]);
+  let c = null;
+  for (let it = 0; it < AQE_ITERS; it++) {
+    const pool = it === 0 || !found.size ? seeds : [...found.keys()];
+    let good = pool.filter((i) => faces[i].px >= GOOD_PX);
+    if (!good.length) good = pool;
+    const ref = c;
+    const d0 = (i) => (ref ? distance(ref, faces[i].d) : dq[i]);
+    const top = good.sort((a, b) => d0(a) - d0(b)).slice(0, AQE_TOP);
+    const sum = new Float32Array(faces[0].d.length);
+    for (const r of state.refs) for (let k = 0; k < sum.length; k++) sum[k] += r[k];
+    for (const i of top) for (let k = 0; k < sum.length; k++) sum[k] += faces[i].d[k];
+    c = normalize(sum);
+    for (let i = 0; i < faces.length; i++) {
+      const d = distance(c, faces[i].d);
+      if (d < lim(i, level.t2)) found.set(i, Math.min(found.get(i) ?? Infinity, dq[i], d));
+    }
   }
-  ds.sort((a, b) => a - b);
-  const top = ds.slice(0, COHORT_TOP);
-  const mean = top.reduce((s, x) => s + x, 0) / top.length;
-  const sd = Math.sqrt(top.reduce((s, x) => s + (x - mean) ** 2, 0) / top.length) || 1;
-  return [mean, sd];
+  return found;
+}
+
+function conflicts(found) {
+  const faces = state.index.faces;
+  const perPhoto = new Map();
+  for (const i of found.keys()) perPhoto.set(faces[i].p, (perPhoto.get(faces[i].p) || 0) + 1);
+  const n = perPhoto.size;
+  return n ? [...perPhoto.values()].filter((v) => v > 1).length / n : 0;
 }
 
 function search() {
   if (!state.refs.length) { els.resultsCard.hidden = true; return; }
   const firstTime = els.resultsCard.hidden;
   const faces = state.index.faces;
-  const scores = new Float32Array(faces.length).fill(-Infinity);
-  for (const r of state.refs) {
-    const [qm, qs] = cohortStats(r);
-    for (let i = 0; i < faces.length; i++) {
-      const f = faces[i];
-      const d = distance(r, f.d);
-      const s = f.mu ? 0.5 * ((f.mu - d) / f.sd + (qm - d) / qs) : (qm - d) / qs;
-      if (s > scores[i]) scores[i] = s;
-    }
+  const dq = new Float32Array(faces.length);
+  for (let i = 0; i < faces.length; i++) {
+    let d = Infinity;
+    for (const r of state.refs) d = Math.min(d, distance(r, faces[i].d));
+    dq[i] = d;
   }
-  state.scores = scores;
+  const loose = runLevel(dq, LEVELS[0]);
+  let main = loose;
+  for (const level of LEVELS) {
+    main = level === LEVELS[0] ? loose : runLevel(dq, level);
+    if (conflicts(main) <= MAX_CONFLICTS) break;
+  }
+  const extra = new Map(loose);
+  for (let i = 0; i < faces.length; i++) if (dq[i] < MAYBE_DIST && !extra.has(i)) extra.set(i, dq[i]);
+  state.dq = dq;
+  state.main = main;
+  state.extra = extra;
   renderResults();
   if (firstTime) els.resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Fotos encontradas com o rigor t: uma entrada por foto, com a cara mais convincente.
-function collect(t) {
+// Uma entrada por foto, com a cara mais parecida; score = −distância.
+function collect(tier) {
   const { faces, photos } = state.index;
-  const sc = state.scores;
-  const seeds = [];
-  for (let i = 0; i < faces.length; i++) if (sc[i] >= t) seeds.push(i);
   const best = new Map();
-  const take = (i, kind) => {
-    const cur = best.get(faces[i].p);
-    if (!cur || sc[i] > cur.score) best.set(faces[i].p, { face: faces[i], score: sc[i], kind, photo: photos[faces[i].p] });
-  };
-  for (const i of seeds) take(i, 'seed');
-  const gate = t - EXPAND_MARGIN;
-  for (let h = 0; h < faces.length; h++) {
-    if (sc[h] < gate || sc[h] >= t || best.has(faces[h].p)) continue;
-    for (const s of seeds) {
-      if (faces[s].p !== faces[h].p && distance(faces[s].d, faces[h].d) < LINK_DIST) { take(h, 'link'); break; }
+  const add = (found) => {
+    for (const [i, d] of found) {
+      const cur = best.get(faces[i].p);
+      if (!cur || -d > cur.score) best.set(faces[i].p, { face: faces[i], score: -d, kind: state.dq[i] < SEED_DIST ? 'seed' : 'link', photo: photos[faces[i].p] });
     }
-  }
+  };
+  add(state.main);
+  if (tier === MAYBE_THRESHOLD) add(state.extra);
   return [...best.values()].sort((a, b) => b.score - a.score);
 }
 
@@ -441,8 +481,8 @@ function showMaybe() {
 
 function verdict(m) {
   if (m.kind === 'maybe') return { label: 'SERÁ?', cls: 'low' };
-  if (m.kind === 'seed' && m.score >= SURE_SCORE) return { label: 'ÉS TU!', cls: 'high' };
-  if (m.kind === 'seed' && m.score >= LIKELY_SCORE) return { label: 'PROVÁVEL', cls: 'mid' };
+  if (-m.score < SURE_DIST) return { label: 'ÉS TU!', cls: 'high' };
+  if (-m.score < LIKELY_DIST) return { label: 'PROVÁVEL', cls: 'mid' };
   return { label: 'TALVEZ', cls: 'low' };
 }
 
@@ -456,7 +496,8 @@ function renderResults() {
     : '');
   els.grid.replaceChildren(...hits.map(renderCard));
   const seen = new Set(hits.map((m) => m.face.p));
-  const maybe = collect(MAYBE_THRESHOLD).filter((m) => !seen.has(m.face.p)).map((m) => ({ ...m, kind: 'maybe' }));
+  // no máximo as 60 mais parecidas: quem cai num "hub" teria centenas de palpites fracos
+  const maybe = collect(MAYBE_THRESHOLD).filter((m) => !seen.has(m.face.p)).slice(0, MAYBE_MAX).map((m) => ({ ...m, kind: 'maybe' }));
   state.maybe = maybe;
   els.maybeBox.hidden = !maybe.length;
   els.maybeGrid.hidden = true;

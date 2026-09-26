@@ -14,9 +14,10 @@ import { fileURLToPath } from 'node:url';
 import { unpack, quantize } from './format.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const INDEX = path.resolve(here, '../data/faces.json');
+const INDEX = path.resolve(here, '../data/index-arc.json');
 const GROOM_OUT = path.resolve(here, '../data/noivo.json');
-const LINK = 0.33;        // distância máxima para ligar duas caras da galeria como a mesma pessoa
+const LINK = 1.05;        // distância ArcFace máxima para ligar duas caras da galeria como a mesma pessoa
+const MIN_PX = 80;        // só caras com resolução suficiente (as pequenas fazem pontes entre pessoas)
 const TOP = +process.env.TOP || 8;
 const TEMPLATE = 40;      // caras de referência gravadas para o noivo
 
@@ -108,7 +109,9 @@ async function ageGender(photos, faces, members) {
 
 async function main() {
   const raw = JSON.parse(await fs.readFile(INDEX, 'utf8'));
-  const { photos, faces } = unpack(raw);
+  const all = unpack(raw);
+  const photos = all.photos;
+  const faces = all.faces.filter((f) => f.b[2] * photos[f.p].w >= MIN_PX);
   const t0 = Date.now();
   const people = clusterPeople(faces);
   console.log(`${faces.length} caras → ${people.length} grupos em ${((Date.now() - t0) / 1000).toFixed(0)}s\n`);
