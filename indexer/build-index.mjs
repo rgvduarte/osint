@@ -10,7 +10,7 @@
 //   PHOTOS_DIR + PHOTO_BASE_URL        pasta local; o URL público é BASE + caminho relativo
 //
 // Opções:
-//   OUT            ficheiro de saída (default ../data/faces.json)
+//   OUT            ficheiro de saída (default ../data/index-arc.json)
 //   MAX_SIDE       redimensiona antes de detetar (default 2048)
 //   MIN_FACE       ignora caras menores que isto em px (default 36)
 //   MIN_SCORE      confiança mínima do detetor (default 0.4)
@@ -26,11 +26,13 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import * as faceapi from '@vladmandic/face-api';
-import { pack, unpack } from './format.mjs';
+import { pack, unpack, MODEL } from './format.mjs';
+import * as ort from 'onnxruntime-node';
+import { fivePoints, alignedInput, l2normalize, ARC_SIZE } from '../arcface.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
-const OUT = path.resolve(here, env.OUT || '../data/faces.json');
+const OUT = path.resolve(here, env.OUT || '../data/index-arc.json');
 const DEBUG_DIR = path.resolve(here, 'debug');
 const MAX_SIDE = +env.MAX_SIDE || 2048;
 const MIN_FACE = +env.MIN_FACE || 36;
@@ -272,7 +274,26 @@ async function loadModels() {
   const dir = path.join(path.dirname(fileURLToPath(import.meta.resolve('@vladmandic/face-api'))), '../model');
   await faceapi.nets.ssdMobilenetv1.loadFromDisk(dir);
   await faceapi.nets.faceLandmark68Net.loadFromDisk(dir);
-  await faceapi.nets.faceRecognitionNet.loadFromDisk(dir);
+  arc = await ort.InferenceSession.create(path.resolve(here, '../models/w600k_mbf.onnx'));
+}
+
+// ---------------------------------------------------------------- reconhecimento (ArcFace)
+// A deteção e os 68 pontos continuam a ser do face-api; o descritor é o ArcFace (InsightFace
+// w600k_mbf, 512 dimensões), média da cara alinhada e da mesma espelhada.
+let arc = null;
+
+function mirror(input) {
+  const S = ARC_SIZE, out = new Float32Array(input.length);
+  for (let c = 0; c < 3; c++) for (let v = 0; v < S; v++) for (let u = 0; u < S; u++) {
+    out[c * S * S + v * S + u] = input[c * S * S + v * S + (S - 1 - u)];
+  }
+  return out;
+}
+
+export async function arcEmbedding(input) {
+  const run = async (x) => (await arc.run({ [arc.inputNames[0]]: new ort.Tensor('float32', x, [1, 3, ARC_SIZE, ARC_SIZE]) }))[arc.outputNames[0]].data;
+  const a = await run(input), b = await run(mirror(input));
+  return l2normalize(a.map((x, i) => x + b[i]));
 }
 
 const iou = (a, b) => {
@@ -284,8 +305,12 @@ const iou = (a, b) => {
 
 async function detect(tensor) {
   const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: MIN_SCORE, maxResults: 200 });
-  const run = async (t, dx, dy) => (await faceapi.detectAllFaces(t, opts).withFaceLandmarks().withFaceDescriptors())
-    .map((r) => ({ box: { x: r.detection.box.x + dx, y: r.detection.box.y + dy, width: r.detection.box.width, height: r.detection.box.height }, score: r.detection.score, descriptor: r.descriptor }));
+  const run = async (t, dx, dy) => (await faceapi.detectAllFaces(t, opts).withFaceLandmarks())
+    .map((r) => ({
+      box: { x: r.detection.box.x + dx, y: r.detection.box.y + dy, width: r.detection.box.width, height: r.detection.box.height },
+      score: r.detection.score,
+      pts: r.landmarks.positions.map((q) => ({ x: q.x + dx, y: q.y + dy })),
+    }));
 
   const [h, w] = tensor.shape;
   const faces = await run(tensor, 0, 0);
@@ -301,7 +326,10 @@ async function detect(tensor) {
       tile.dispose();
     }
   }
-  return faces.filter((f) => f.box.width >= MIN_FACE && f.box.height >= MIN_FACE);
+  const kept = faces.filter((f) => f.box.width >= MIN_FACE && f.box.height >= MIN_FACE);
+  const px = await tensor.data();
+  for (const f of kept) f.descriptor = await arcEmbedding(alignedInput(px, w, h, 3, fivePoints(f.pts)));
+  return kept;
 }
 
 function decode(bytes) {
@@ -356,7 +384,10 @@ async function main() {
   // Reaproveita resultados anteriores: só as fotos novas são processadas.
   const cache = new Map();
   try {
-    const prev = unpack(JSON.parse(await fs.readFile(OUT, 'utf8')));
+    const prevRaw = JSON.parse(await fs.readFile(OUT, 'utf8'));
+    // Só se reaproveita um índice feito com o mesmo modelo de reconhecimento.
+    if (prevRaw.model !== MODEL) throw new Error('outro modelo');
+    const prev = unpack(prevRaw);
     const byPhoto = prev.photos.map(() => []);
     for (const f of prev.faces) byPhoto[f.p]?.push(f);
     prev.photos.forEach((p, i) => cache.set(p.f, { photo: p, faces: byPhoto[i] }));
