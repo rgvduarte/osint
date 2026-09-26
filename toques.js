@@ -58,7 +58,6 @@ export function initToques(root) {
     f.src = `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=${calmo() ? 0 : 1}&mute=1&playsinline=1&loop=1&playlist=${VIDEO_ID}&rel=0`;
     f.title = 'Vídeo: «O campo tá desmanchado»';
     f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-    f.allowFullscreen = true;
     f.referrerPolicy = 'strict-origin-when-cross-origin'; // o YouTube recusa embeds sem origem
     ui.prova.querySelector('.prova-video').append(f);
     ui.prova.hidden = false;

@@ -237,6 +237,51 @@
         <button class="text-btn" id="regrasSofaBtn">Regulamento do sofá</button>
       </div>
     </section>
+
+    <section class="jogo berlim" id="berlim" aria-labelledby="berlimTitulo">
+      <span class="tab">Capitania de Sesimbra</span>
+      <span class="prize" data-t="premio"></span>
+      <div class="pt-intro">
+        <img class="pt-face" src="assets/ines-cara.jpg" alt="A Inês">
+        <h2 class="pt-title" id="berlimTitulo" data-t="titulo"></h2>
+      </div>
+      <p class="pt-text" data-t="intro"></p>
+
+      <div class="arcade">
+        <span class="plate" data-t="nome_jogo"></span>
+        <div class="screen">
+          <canvas width="360" height="540" aria-label="Jogo: arrasta para trás e larga para a Inês atirar bolas de Berlim aos porcos de fato de banho"></canvas>
+          <div class="over" data-over hidden>
+            <span class="over-stamp" data-t="carimbo"></span>
+            <p class="over-title" data-over-title tabindex="-1"></p>
+            <p class="over-text" data-over-text></p>
+            <p class="over-verdict" data-over-verdict></p>
+            <label class="over-name">O teu nome
+              <input data-name maxlength="20" autocomplete="nickname" enterkeyhint="send" placeholder="Nome e apelido">
+            </label>
+            <button class="btn" data-submit>Entrar no leaderboard</button>
+            <div class="over-links">
+              <button class="text-btn light" data-again>Outra vez!</button>
+            </div>
+          </div>
+        </div>
+        <p class="fine arcade-help">Arrasta para trás e larga para atirar (como numa fisga). Com a bola no ar, toca outra vez para ela rebentar em creme. No teclado: ↑↓ ângulo, ←→ força, Espaço atira.</p>
+      </div>
+
+      <ul class="powers" aria-label="Pontos">
+        <li><span class="pw-emoji" aria-hidden="true">🐷</span><b>1000 pontos</b><span>por cada porco de fato de banho</span></li>
+        <li><span class="pw-emoji" aria-hidden="true">🏖️</span><b>+2000</b><span>por nível limpo</span></li>
+        <li><span class="pw-emoji" aria-hidden="true">🍩</span><b>+1500</b><span>por cada bola que sobra</span></li>
+        <li><span class="pw-emoji" aria-hidden="true">🍦</span><b>Creme</b><span>toca com a bola no ar: rebenta e empurra tudo</span></li>
+      </ul>
+
+      <div class="board">
+        <h3>Leaderboard</h3>
+        <ol data-board></ol>
+        <p class="fine" data-board-note></p>
+        <button class="text-btn" id="regrasBerlimBtn">Regulamento da praia</button>
+      </div>
+    </section>
   </main>
 
   <dialog id="lightbox">

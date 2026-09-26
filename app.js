@@ -1,4 +1,4 @@
-import { DOSSIES } from './dossies.js';
+import { DOSSIES, dossiesDosJogos } from './dossies.js';
 import { fivePoints, alignedInput, l2normalize, ARC_SIZE } from './arcface.js';
 
 // Inspector Xinxers — compara uma selfie com o índice pré-calculado (data/faces.json).
@@ -963,18 +963,22 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !els.men
 els.pageClose.addEventListener('click', () => els.page.close());
 els.page.addEventListener('click', (e) => { if (e.target === els.page) els.page.close(); });
 buildMenu();
+dossiesDosJogos().then((extra) => { DOSSIES.push(...extra); buildMenu(); }).catch(() => {});
 document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
 
-$('regrasBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento')));
-$('regrasToquesBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento-toques')));
-$('regrasSofaBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento-sofa')));
+const abrirDossie = (id) => { const d = DOSSIES.find((q) => q.id === id); if (d) openDossie(d); };
+$('regrasBtn').addEventListener('click', () => abrirDossie('regulamento'));
+$('regrasToquesBtn').addEventListener('click', () => abrirDossie('regulamento-toques'));
+$('regrasSofaBtn').addEventListener('click', () => abrirDossie('regulamento-sofa'));
+$('regrasBerlimBtn').addEventListener('click', () => abrirDossie('regulamento-berlim'));
 // Os jogos vivem à parte: se falharem, a pesquisa de fotos continua a funcionar.
 import('./jogo.js').then((m) => m.initJogo($('jogo'))).catch((e) => console.warn('jogo:', e));
 import('./toques.js').then((m) => m.initToques($('toques'))).catch((e) => console.warn('toques:', e));
 import('./sofa.js').then((m) => m.initSofa($('sofa'))).catch((e) => console.warn('sofa:', e));
+import('./berlim.js').then((m) => m.initBerlim($('berlim'))).catch((e) => console.warn('berlim:', e));
 
 loadIndex();
 els.hatHint.hidden = found.has('hat');

@@ -1,9 +1,6 @@
 // Conteúdo do menu "Dossiês" (texto fixo do site).
 // Escrito por 4 "escritores" com ângulos diferentes, avaliado por um júri e verificado contra factos
 // inventados; só usa factos reais (números do índice, fotos dadas pelo inspector).
-import { TEXTOS } from './jogo-textos.js';
-import { TEXTOS as TOQUES } from './toques-textos.js';
-import { TEXTOS as SOFA } from './sofa-textos.js';
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -64,50 +61,27 @@ export const DOSSIES = [
     "emoji": "🥴",
     "label": "Modo ressaca",
     "action": "ressaca"
-  },
-  {
-    id: 'jogo',
-    emoji: '🍾',
-    label: `Jogar: ${TEXTOS.nome_jogo}`,
-    action: 'jogo',
-    target: 'jogo'
-  },
-  {
-    id: 'toques',
-    emoji: '⚽',
-    label: `Jogar: ${TOQUES.nome_jogo}`,
-    action: 'jogo',
-    target: 'toques'
-  },
-  {
-    id: 'sofa',
-    emoji: '🛋️',
-    label: `Jogar: ${SOFA.nome_jogo}`,
-    action: 'jogo',
-    target: 'sofa'
-  },
-  {
-    id: 'regulamento',
-    emoji: '🏆',
-    label: 'Regulamento do passatempo',
-    tab: 'Passatempo',
-    title: 'Regulamento do passatempo',
-    html: TEXTOS.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
-  },
-  {
-    id: 'regulamento-toques',
-    emoji: '🎬',
-    label: 'Regulamento do casting',
-    tab: 'Repescagem',
-    title: 'Regulamento do casting',
-    html: TOQUES.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
-  },
-  {
-    id: 'regulamento-sofa',
-    emoji: '🥃',
-    label: 'Regulamento do sofá',
-    tab: 'Auto de ocorrência',
-    title: 'Regulamento do sofá',
-    html: SOFA.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
   }
 ];
+
+
+// Entradas dos jogos (jogar e regulamentos). Os textos carregam à parte: se um falhar, o menu e a
+// pesquisa de fotos continuam a funcionar.
+export async function dossiesDosJogos() {
+  const carregar = (f) => import(f).then((m) => m.TEXTOS);
+  const [TEXTOS, TOQUES, SOFA, BERLIM] = await Promise.all(
+    ['./jogo-textos.js', './toques-textos.js', './sofa-textos.js', './berlim-textos.js'].map((f) => carregar(f).catch(() => null)),
+  );
+  const jogar = (id, emoji, T) => (T ? [{ id, emoji, label: `Jogar: ${T.nome_jogo}`, action: 'jogo', target: id }] : []);
+  const regras = (id, emoji, label, tab, T) => (T ? [{ id, emoji, label, tab, title: label, html: T.regulamento.map((r) => `<p>${esc(r)}</p>`).join('') }] : []);
+  return [
+    ...jogar('jogo', '🍾', TEXTOS),
+    ...jogar('toques', '⚽', TOQUES),
+    ...jogar('sofa', '🛋️', SOFA),
+    ...jogar('berlim', '🍩', BERLIM),
+    ...regras('regulamento', '🏆', 'Regulamento do passatempo', 'Passatempo', TEXTOS),
+    ...regras('regulamento-toques', '🎬', 'Regulamento do casting', 'Repescagem', TOQUES),
+    ...regras('regulamento-sofa', '🥃', 'Regulamento do sofá', 'Auto de ocorrência', SOFA),
+    ...regras('regulamento-berlim', '🏖️', 'Regulamento da praia', 'Capitania de Sesimbra', BERLIM),
+  ];
+}
