@@ -18,41 +18,44 @@ const pick = (list) => list[Math.floor(Math.random() * list.length)];
 // Níveis: peças pousadas na areia (y = centro). k: madeira | prancha | geleira | areia | porco
 const G = GROUND;
 const NIVEIS = [
-  { bolas: 3, pecas: [ // torre do nadador-salvador
-    { k: 'madeira', x: 240, y: G - 40, w: 10, h: 80 },
-    { k: 'madeira', x: 300, y: G - 40, w: 10, h: 80 },
-    { k: 'madeira', x: 270, y: G - 85, w: 82, h: 10 },
-    { k: 'porco', x: 270, y: G - 105, r: 15, tipo: 'calcoes' },
-    { k: 'geleira', x: 200, y: G - 13, w: 34, h: 26 },
-    { k: 'prancha', x: 322, y: G - 32, w: 12, h: 64, cor: '#e8573c' },
-    { k: 'porco', x: 342, y: G - 14, r: 14, tipo: 'boia' },
-  ] },
-  { bolas: 4, pecas: [ // geleiras, pranchas e uma torre de areia
+  { bolas: 4, pecas: [ // primeira fornada: geleiras, uma prancha e uma torre de areia
     { k: 'geleira', x: 205, y: G - 13, w: 34, h: 26 },
     { k: 'geleira', x: 245, y: G - 13, w: 34, h: 26 },
     { k: 'prancha', x: 225, y: G - 31, w: 86, h: 10, cor: '#2f9e8f' },
-    { k: 'porco', x: 225, y: G - 50, r: 14, tipo: 'fato' },
+    { k: 'porco', x: 225, y: G - 50, r: 14, tipo: 'boia' },
     { k: 'areia', x: 292, y: G - 14, w: 28, h: 28 },
     { k: 'areia', x: 292, y: G - 42, w: 28, h: 28 },
     { k: 'porco', x: 292, y: G - 70, r: 14, tipo: 'biquini' },
-    { k: 'areia', x: 322, y: G - 20, w: 20, h: 40 },
+    { k: 'areia', x: 322, y: G - 11, w: 20, h: 22 },
     { k: 'porco', x: 346, y: G - 13, r: 13, tipo: 'calcoes' },
   ] },
-  { bolas: 5, pecas: [ // o castelo de areia
-    { k: 'areia', x: 200, y: G - 15, w: 30, h: 30 },
-    { k: 'areia', x: 262, y: G - 15, w: 30, h: 30 },
-    { k: 'areia', x: 324, y: G - 15, w: 30, h: 30 },
-    { k: 'porco', x: 231, y: G - 12, r: 12, tipo: 'calcoes' },
-    { k: 'porco', x: 293, y: G - 12, r: 12, tipo: 'fato' },
-    { k: 'madeira', x: 262, y: G - 35, w: 152, h: 10 },
-    { k: 'areia', x: 205, y: G - 53, w: 26, h: 26 },
-    { k: 'areia', x: 319, y: G - 53, w: 26, h: 26 },
-    { k: 'porco', x: 262, y: G - 53, r: 13, tipo: 'biquini' },
-    { k: 'prancha', x: 262, y: G - 70, w: 132, h: 8, cor: '#f2b632' },
-    { k: 'porco', x: 262, y: G - 88, r: 14, tipo: 'boia' },
+  { bolas: 5, pecas: [ // castelos com recheio: por fora areia, por dentro porco
+    { k: 'areia', x: 190, y: G - 20, w: 10, h: 40 },
+    { k: 'areia', x: 226, y: G - 20, w: 10, h: 40 },
+    { k: 'porco', x: 208, y: G - 12, r: 12, tipo: 'calcoes' },
+    { k: 'areia', x: 262, y: G - 20, w: 10, h: 40 },
+    { k: 'areia', x: 298, y: G - 20, w: 10, h: 40 },
+    { k: 'porco', x: 280, y: G - 12, r: 12, tipo: 'fato' },
+    { k: 'prancha', x: 280, y: G - 45, w: 54, h: 10, cor: '#f2b632' },
+    { k: 'porco', x: 280, y: G - 63, r: 13, tipo: 'boia' },
+    { k: 'areia', x: 336, y: G - 12, w: 24, h: 24 },
+    { k: 'areia', x: 336, y: G - 36, w: 24, h: 24 },
+    { k: 'porco', x: 336, y: G - 61, r: 13, tipo: 'biquini' },
+  ] },
+  { bolas: 4, pecas: [ // bandeira vermelha: tomaram a torre do nadador-salvador, e a caixa das bolas
+    { k: 'areia', x: 200, y: G - 24, w: 24, h: 48 },
+    { k: 'porco', x: 228, y: G - 13, r: 13, tipo: 'calcoes' },
+    { k: 'madeira', x: 250, y: G - 45, w: 10, h: 90 },
+    { k: 'madeira', x: 310, y: G - 45, w: 10, h: 90 },
+    { k: 'porco', x: 280, y: G - 13, r: 13, tipo: 'fato' },
+    { k: 'madeira', x: 280, y: G - 95, w: 84, h: 10, bandeira: true },
+    { k: 'porco', x: 266, y: G - 115, r: 15, tipo: 'boia' },
+    { k: 'caixa', x: 302, y: G - 109, w: 24, h: 18 },
+    { k: 'prancha', x: 326, y: G - 35, w: 12, h: 70, cor: '#e8573c' },
+    { k: 'porco', x: 347, y: G - 13, r: 13, tipo: 'biquini' },
   ] },
 ];
-const COR = { madeira: '#c8934f', geleira: '#3b82c4', areia: '#e2c27f' };
+const COR = { madeira: '#c8934f', geleira: '#3b82c4', areia: '#e2c27f', caixa: '#fbf7ee' };
 
 let matterP = null;
 function carregarMatter() {
@@ -102,6 +105,9 @@ export function initBerlim(root) {
   const jogando = () => mode !== 'intro' && mode !== 'over';
   const setMode = (m) => { mode = m; canvas.parentElement.classList.toggle('playing', jogando()); };
   let raf = 0, last = 0, acc = 0;
+  let drag = null;      // início do arrasto de pontaria
+  // saiu do ecrã a meio: fica suspensa e só volta com um toque limpo (um deslizar para fazer scroll não conta)
+  let suspensa = false;
   let best = load(BEST_KEY, 0);
   const placar = criarPlacar({ path: 'berlim', localKey: LB_KEY, board: ui.board, note: ui.boardNote });
   const resetPainel = ligarSubmissao(ui, placar, () => (mode === 'over' ? g : null));
@@ -125,7 +131,7 @@ export function initBerlim(root) {
         b = p.k === 'prancha'
           ? Bodies.rectangle(p.x, p.y, p.w, p.h, { ...opts, chamfer: { radius: Math.min(p.w, p.h) / 2 - 0.5 } })
           : Bodies.rectangle(p.x, p.y, p.w, p.h, opts);
-        b.plugin = { k: p.k, w: p.w, h: p.h, cor: p.cor || COR[p.k] };
+        b.plugin = { k: p.k, w: p.w, h: p.h, cor: p.cor || COR[p.k], bandeira: p.bandeira };
       }
       Composite.add(engine.world, b);
       Sleeping.set(b, true); // tudo quieto até levar com a primeira bola
@@ -185,8 +191,14 @@ export function initBerlim(root) {
     if (aArrancar) return;
     aArrancar = true;
     try { M = M || await carregarMatter(); } catch (e) { console.warn(e); return; } finally { aArrancar = false; }
+    suspensa = false;
     newGame();
     ui.over.hidden = true;
+  }
+  function retomar() {
+    suspensa = false;
+    setMode(mode); // volta a prender os toques no canvas
+    last = performance.now(); acc = 0;
   }
 
   // velocidade de lançamento a partir do puxão (arrastar para trás, como numa fisga)
@@ -224,7 +236,7 @@ export function initBerlim(root) {
       if (b.isStatic) continue;
       const dx = b.position.x - c.x, dy = b.position.y - c.y, d = Math.hypot(dx, dy);
       if (d > CREME_R) continue;
-      if (b.label === 'porco' && d < 36) { derrotar(b); continue; }
+      if (b.label === 'porco' && d < 44) { derrotar(b); continue; }
       const f = (1 - d / CREME_R) * 7;
       M.Sleeping.set(b, false);
       M.Body.setVelocity(b, { x: b.velocity.x + (dx / (d || 1)) * f, y: b.velocity.y + (dy / (d || 1)) * f - f * 0.3 });
@@ -416,11 +428,21 @@ export function initBerlim(root) {
       ctx.fillStyle = p.cor; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h);
       ctx.fillStyle = '#fbf7ee'; ctx.fillRect(-w / 2, -h / 2, w, 7); ctx.strokeRect(-w / 2, -h / 2, w, 7);
       ctx.fillStyle = INK; ctx.fillRect(-6, -h / 2 + 2, 12, 3);
+    } else if (p.k === 'caixa') {
+      // a caixa das bolas de Berlim, roubada pelos porcos
+      ctx.fillStyle = p.cor; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h);
+      ctx.fillStyle = '#d8322a'; ctx.fillRect(-w / 2, -1, w, 5);
     } else if (p.k === 'areia') {
       ctx.fillStyle = p.cor; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h);
       ctx.fillStyle = 'rgba(42,31,23,.18)';
       for (const [dx, dy] of [[-0.25, -0.2], [0.2, 0.1], [-0.1, 0.3], [0.3, -0.3]]) ctx.fillRect(dx * w, dy * h, 2, 2);
     } else {
+      if (p.bandeira) {
+        // mastro com a bandeira vermelha, na plataforma da torre
+        ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(w / 2 - 6, -h / 2); ctx.lineTo(w / 2 - 6, -h / 2 - 46); ctx.stroke();
+        ctx.fillStyle = '#d8322a'; ctx.beginPath(); ctx.moveTo(w / 2 - 6, -h / 2 - 46); ctx.lineTo(w / 2 + 16, -h / 2 - 39); ctx.lineTo(w / 2 - 6, -h / 2 - 32); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
       ctx.fillStyle = p.cor; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h);
       ctx.strokeStyle = 'rgba(42,31,23,.3)'; ctx.lineWidth = 1;
       ctx.beginPath();
@@ -567,12 +589,16 @@ export function initBerlim(root) {
       outlined(tx.text, tx.x, tx.y, tx.size, tx.color);
       ctx.globalAlpha = 1;
     }
+    if (suspensa) {
+      ctx.fillStyle = 'rgba(18,17,16,.55)'; ctx.fillRect(0, 0, W, H);
+      outlined('Toca para continuar', W / 2, H / 2, 26);
+    }
   }
 
   function loop(ts) {
     const dt = Math.min(0.1, (ts - last) / 1000 || 0);
     last = ts;
-    if (g && jogando()) {
+    if (g && jogando() && !suspensa) {
       acc += dt * 1000;
       let n = 0;
       while (acc >= STEP && n < 4) { passo(); acc -= STEP; n++; }
@@ -586,6 +612,12 @@ export function initBerlim(root) {
     const e = entries[entries.length - 1];
     cancelAnimationFrame(raf);
     if (e.isIntersecting) { carregarMatter().then((m) => { M = m; }).catch(() => {}); last = performance.now(); raf = requestAnimationFrame(loop); }
+    else if (jogando()) {
+      suspensa = true;
+      if (mode === 'mira') { drag = null; g.pull = null; setMode('pronto'); }
+      canvas.parentElement.classList.remove('playing');
+      draw();
+    }
   }, { threshold: 0.2 });
   io.observe(canvas);
 
@@ -593,9 +625,8 @@ export function initBerlim(root) {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
   };
-  let drag = null;
   canvas.addEventListener('pointerdown', (e) => {
-    if (!jogando()) return;
+    if (!jogando() || suspensa || !e.isPrimary) return; // (dois dedos não valem dois toques)
     e.preventDefault();
     if (mode === 'voo') return creme();
     if (mode !== 'pronto') return;
@@ -618,12 +649,15 @@ export function initBerlim(root) {
   };
   canvas.addEventListener('pointerup', largar);
   canvas.addEventListener('pointercancel', () => { if (mode === 'mira') { drag = null; g.pull = null; setMode('pronto'); } });
-  canvas.addEventListener('click', () => { if (mode === 'intro') start(); });
+  canvas.addEventListener('click', () => { if (mode === 'intro') start(); else if (suspensa) retomar(); });
   // teclado: ↑↓ ângulo, ←→ força, Espaço atira e, no ar, rebenta em creme
   document.addEventListener('keydown', (e) => {
     const keys = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (!keys.includes(e.code)) return;
     if (e.target.closest('input, textarea, button, a, dialog')) return;
+    const r = canvas.getBoundingClientRect();
+    const aVista = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) >= r.height * 0.6; // o jogo tem de estar à vista
+    if (suspensa) { if (aVista && e.code === 'Space' && !e.repeat) { e.preventDefault(); retomar(); } return; }
     if (jogando()) {
       e.preventDefault();
       if (mode === 'pronto') {
@@ -636,9 +670,7 @@ export function initBerlim(root) {
       } else if (mode === 'voo' && e.code === 'Space' && !e.repeat) creme();
       return;
     }
-    if (mode !== 'intro' || e.code !== 'Space' || e.repeat) return;
-    const r = canvas.getBoundingClientRect();
-    if (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) < r.height * 0.6) return; // o jogo tem de estar à vista
+    if (mode !== 'intro' || e.code !== 'Space' || e.repeat || !aVista) return;
     e.preventDefault();
     start();
   });
