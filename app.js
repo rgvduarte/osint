@@ -32,7 +32,7 @@ const els = {
   clueCount: $('clueCount'), engineMsg: $('engineMsg'), photoCount: $('photoCount'),
   resultsCard: $('resultsCard'), resultsTitle: $('resultsTitle'), resultsMsg: $('resultsMsg'), grid: $('grid'),
   lightbox: $('lightbox'), lbImg: $('lbImg'), lbBox: $('lbBox'), lbInfo: $('lbInfo'),
-  lbOpen: $('lbOpen'), lbClose: $('lbClose'), lbImgWrap: $('lbImgWrap'),
+  lbOpen: $('lbOpen'), lbClose: $('lbClose'), lbImgWrap: $('lbImgWrap'), lbPrev: $('lbPrev'), lbNext: $('lbNext'),
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
   wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
   wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
@@ -685,21 +685,56 @@ function renderCard(m) {
 
 // ---------------------------------------------------------------- lupa
 
+// ---- Vista grande em modo galeria: setas, deslizar com o dedo, teclado; pré-carrega as vizinhas.
+// Navega pela lista que está no ecrã (provas e, se abertas, as "talvez"), pela mesma ordem.
 function openLightbox(m) {
+  const i = (state.hits || []).indexOf(m);
+  showAt(i < 0 ? 0 : i, i < 0 ? [m] : null);
+  if (!els.lightbox.open) els.lightbox.showModal();
+}
+
+function showAt(i, only = null) {
+  const list = only || state.hits || [];
+  if (!list.length) return;
+  i = (i + list.length) % list.length;
+  state.lbIndex = only ? -1 : i;
+  const m = list[i];
   const v = verdict(m);
+  const token = (state.lbToken = (state.lbToken || 0) + 1);
   els.lbImgWrap.style.setProperty('--r', m.photo.w / m.photo.h);
   els.lbImg.src = m.photo.t || m.photo.s;
-  // Carrega a versão maior por cima, se existir.
+  // Carrega a versão maior por cima, se existir (e se entretanto não se passou para outra foto).
   if (m.photo.f && m.photo.f !== els.lbImg.src) {
     const big = new Image();
-    big.onload = () => { if (els.lightbox.open) els.lbImg.src = big.src; };
+    big.onload = () => { if (els.lightbox.open && state.lbToken === token) els.lbImg.src = big.src; };
     big.src = m.photo.f;
   }
   els.lbBox.replaceChildren(mark(m.photo, m.face.b, v.cls));
-  els.lbInfo.textContent = `▸ FOTOGRAMA ${frameNo(m)} · ${v.label}`;
+  const pos = list.length > 1 ? `${i + 1} / ${list.length} · ` : '';
+  els.lbInfo.textContent = `${pos}▸ FOTOGRAMA ${frameNo(m)} · ${v.label}`;
   els.lbOpen.href = m.photo.f || m.photo.s;
-  els.lightbox.showModal();
+  els.lbPrev.hidden = els.lbNext.hidden = list.length < 2;
+  // pré-carregar as vizinhas para a navegação ser imediata
+  for (const k of [i + 1, i - 1, i + 2]) {
+    const n = list[(k + list.length) % list.length];
+    if (n && n !== m) { new Image().src = n.photo.t || n.photo.s; if (n.photo.f) new Image().src = n.photo.f; }
+  }
 }
+
+function stepLightbox(d) {
+  if (state.lbIndex >= 0) showAt(state.lbIndex + d);
+}
+
+// deslizar com o dedo
+let swipe = null;
+els.lbImgWrap.addEventListener('pointerdown', (e) => { swipe = { x: e.clientX, y: e.clientY }; });
+els.lbImgWrap.addEventListener('pointerup', (e) => {
+  if (!swipe) return;
+  const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+  swipe = null;
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) stepLightbox(dx < 0 ? 1 : -1);
+});
+els.lbImgWrap.addEventListener('pointercancel', () => { swipe = null; });
 
 // ---------------------------------------------------------------- o inspector em pessoa
 
@@ -905,6 +940,13 @@ els.fileInput.addEventListener('change', async () => {
   if (file) addClue(await fileToCanvas(file));
 });
 els.lbClose.addEventListener('click', () => els.lightbox.close());
+els.lbPrev.addEventListener('click', (e) => { e.stopPropagation(); stepLightbox(-1); });
+els.lbNext.addEventListener('click', (e) => { e.stopPropagation(); stepLightbox(1); });
+document.addEventListener('keydown', (e) => {
+  if (!els.lightbox.open) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stepLightbox(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); stepLightbox(-1); }
+});
 els.hat.addEventListener('click', tapHat);
 els.destruct.addEventListener('click', selfDestruct);
 els.stamp.addEventListener('click', () => { discover('stamp'); showPoster('report'); });
