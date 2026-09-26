@@ -34,7 +34,7 @@ concurrency:
 jobs:
   index:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 330
     defaults:
       run:
         working-directory: indexer
@@ -85,7 +85,10 @@ jobs:
           retention-days: 2
           if-no-files-found: ignore
 
+      # Corre mesmo se a indexação falhar ou for interrompida: o progresso parcial fica guardado
+      # e o run seguinte retoma a partir dele. O rebase evita perder o push se o main avançou entretanto.
       - name: Commit do índice
+        if: always()
         working-directory: .
         run: |
           git config user.name "inspector-xinxers[bot]"
@@ -93,7 +96,11 @@ jobs:
           git add data/
           if git diff --cached --quiet; then
             echo "Índice sem alterações."
-          else
-            git commit -m "Atualizar índice de caras"
-            git push
+            exit 0
           fi
+          git commit -m "Atualizar índice de caras"
+          for attempt in 1 2 3 4; do
+            git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep $((attempt * 5))
+          done
+          exit 1
