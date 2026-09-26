@@ -42,7 +42,7 @@ export function initToques(root) {
   face.src = 'assets/noivo-cara.jpg';
 
   for (const el of root.querySelectorAll('[data-t]')) el.textContent = TEXTOS[el.dataset.t];
-  if (ui.video) { ui.video.href = VIDEO; ui.video.textContent = `${TEXTOS.video_link} ↗`; }
+  if (ui.video) { ui.video.href = VIDEO; ui.video.textContent = TEXTOS.video_link; }
   root.querySelector('[data-powers]')?.replaceChildren(...Object.entries(EVENTOS).map(([id, e]) => {
     const li = document.createElement('li');
     li.innerHTML = '<span class="pw-emoji" aria-hidden="true"></span><b></b><span></span>';

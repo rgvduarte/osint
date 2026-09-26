@@ -1,30 +1,32 @@
+// Textos do jogo de toques "a repescagem" (casting, quedas, veredictos do júri, eventos).
+// Escritos por três humoristas, escolhidos por um editor e verificados contra factos inventados.
 export const TEXTOS = {
   "nome_jogo": "Toca, Ricardo, Toca!",
-  "titulo": "O Inspector Xinxers apresenta: a Repescagem do Casting",
-  "intro": "Boa tarde, caros ouvintes, fala-vos o Inspector Xinxers, em direto do campo mais desmanchado da história! Aquele miúdo de camisola 7 é o Ricardo, grande promessa do futebol, que um dia foi ao casting para gravar um anúncio com o Cristiano... e não foi selecionado. O júri enganou-se, toda a gente sabe. Hoje, dia do casamento, há repescagem! Toca na bola para lhe dar um toque e não a deixes cair nas pedras nem na bosta. Vai, vai, Xinxers-câmara! Está a gravar!",
-  "premio": "Uma pedra\ndo campo\nautografada",
+  "titulo": "Processo n.º 7: a repescagem do casting do Ricardo",
+  "intro": "Vai, vai, Xinxers-câmara! Processo n.º 7 reaberto. Em miúdo, o Ricardo era uma promessa do futebol. Foi a um casting para gravar um anúncio com o Cristiano. Veredicto do júri: \"não selecionado\". (No único casting que importava, a Inês disse que sim.) Isto é a repescagem. \"O campo tá desmanchado, tá cheio de pedras\", mas \"a gente quer jogar à bola\". Toca na bola, não a deixes cair e mostra ao júri o que perdeu.",
+  "premio": "Um par de\nchuteiras\nde queijo",
   "carimbo": "NÃO SELECIONADO",
   "quedas": {
     "pedra": [
-      "PEDRA! A bola bate, ressalta e... está lá? NÃO ESTÁ LÁ! Anulado pela geologia.",
-      "Caiu na pedra! O árbitro vai ao VAR, o VAR vai à pedra, e a pedra decide: acabou.",
-      "“O campo tá desmanchado, tá cheio de pedras”... e tu foste encontrar uma. Logo essa!"
+      "PEDRA! A bola bate, ressalta e… está lá? NÃO ESTÁ LÁ! Anulado pela geologia.",
+      "Caiu numa pedra. \"Tá cheio de pedras\" e esta estava de serviço.",
+      "Pedra. Neste campo, as pedras foram todas selecionadas à primeira."
     ],
     "bosta": [
       "PLOF! Na bosta, senhores, na bosta! Quem vai buscar a bola? Ninguém vai buscar a bola.",
-      "Em cheio na bosta! Bem avisaram: “tá cheio de pedras, cheio de merda”.",
-      "Aterrou na bosta com classe. O júri tapou o nariz e pediu o próximo candidato."
+      "Em cheio na bosta. Bem avisaram: \"tá cheio de pedras, cheio de merda\".",
+      "Caiu na bosta. \"A gente pode-se cagar-se todos\", e a bola foi a primeira."
     ],
     "relva": [
-      "Caiu na relva! A única parte boa do campo e a bola foi lá morrer. Futebol, és cruel!",
-      "Relva macia, sem pedras, sem bosta... e mesmo assim acabou. Aqui não há desculpas!",
-      "Aterragem suave na relva. Bonito sítio para a bola descansar. Não era para descansar!"
+      "Caiu na relva, suavemente, como uma carta de rejeição.",
+      "No único tufo de relva do campo inteiro. Sem pedras, sem bosta… e sem desculpas.",
+      "Relva. Queda limpa. O júri anotou: \"Pelo menos não foi na bosta.\""
     ]
   },
   "veredictos": [
     {
       "min": 0,
-      "texto": "Não selecionado. A bola caiu antes de o júri pousar o café."
+      "texto": "Não selecionado. O júri ainda nem tinha tirado a tampa à caneta."
     },
     {
       "min": 5,
@@ -32,7 +34,7 @@ export const TEXTOS = {
     },
     {
       "min": 10,
-      "texto": "Não selecionado. Técnica impecável, mas o júri achou os atacadores demasiado bem apertados."
+      "texto": "Não selecionado. Promissor, mas o formulário só tem duas opções: \"melhor do mundo\" e \"não\"."
     },
     {
       "min": 20,
@@ -40,15 +42,15 @@ export const TEXTOS = {
     },
     {
       "min": 35,
-      "texto": "Não selecionado. O júri gostou tanto que foi a correr assinar contrato com a vaca."
+      "texto": "Não selecionado. O júri adorou, mas a vaga já estava prometida à vaca."
     },
     {
       "min": 50,
-      "texto": "Não selecionado. Que exibição! O júri chorou, abraçou o olheiro e esqueceu-se de dizer que sim."
+      "texto": "Não selecionado. O júri gritou SIUUU sem querer e, por regulamento, teve de anular o casting."
     },
     {
       "min": 77,
-      "texto": "Não selecionado. Tão bom que o júri achou que já estavas selecionado desde miúdo e foi para casa."
+      "texto": "Não selecionado. Perfeito de mais: o júri desconfiou que eras o Cristiano disfarçado de Ricardo."
     }
   ],
   "marcos": [
@@ -58,70 +60,70 @@ export const TEXTOS = {
     },
     {
       "toques": 10,
-      "texto": "ESTÁ LÁ, ESTÁ LÁ!"
+      "texto": "10! O júri pestanejou"
     },
     {
       "toques": 25,
-      "texto": "O JÚRI JÁ PAROU O CAFÉ!"
+      "texto": "Campo desmanchado, tu não"
     },
     {
       "toques": 50,
-      "texto": "GOLOOO! (não há baliza)"
+      "texto": "50! O carimbo está a tremer"
     },
     {
       "toques": 77,
-      "texto": "SIUUUUUU!"
+      "texto": "SIUUUUUUU!"
     },
     {
       "toques": 100,
-      "texto": "CEM TOQUES! CHAMEM O JÚRI!"
+      "texto": "100! Repesquem este talento!"
     },
     {
       "toques": 150,
-      "texto": "ATÉ AS PEDRAS APLAUDEM!"
+      "texto": "150! Até as pedras aplaudem"
     },
     {
       "toques": 200,
-      "texto": "MELHOR DO MUNDO (DO CAMPO)!"
+      "texto": "200! E mesmo assim… não."
     }
   ],
   "eventos": {
     "olheiro": {
       "nome": "Olheiro do Casting",
-      "grito": "UM OLHEIRO! TOQUES A DOBRAR!"
+      "grito": "Olha o olheiro! Toques x2!"
     },
     "chuteiras": {
       "nome": "Chuteiras de Promessa",
-      "grito": "CHUTEIRAS! A BOLA CRESCEU!"
+      "grito": "Vai, vai, Xinxers-chuteiras!"
     },
     "vaca": {
       "nome": "Defesa Central Vaca",
-      "grito": "INVASÃO DE CAMPO! É UMA VACA!"
+      "grito": "Invasão de campo! É uma vaca!"
     },
     "pombo": {
-      "nome": "Pombo Fora de Jogo",
-      "grito": "OLHA O POMBO! OLHA O POMBO!"
+      "nome": "Pombo-correio do Júri",
+      "grito": "Pombo! Traz a carta: não."
     },
     "vento": {
-      "nome": "Rajada Traiçoeira",
-      "grito": "VENTO! A BOLA VAI DE LADO!"
+      "nome": "Nortada Desmanchada",
+      "grito": "Nortada! A bola vai de lado!"
     }
   },
-  "video_link": "Ver: “O campo tá desmanchado”",
+  "video_link": "▶ Prova A: \"O campo tá desmanchado\"",
   "regulamento": [
-    "Art. 1.º — A bola não toca no chão. O chão, como se vê, não está em condições.",
-    "Art. 2.º — Pedras e bosta são parte integrante do relvado. Reclamações só depois de o inspector acordar.",
-    "Art. 3.º — Se a bola tocar no olheiro, cada toque vale 2 durante 8 segundos. Faz boa figura.",
-    "Art. 4.º — Chuteiras apanhadas dão bola maior durante 6 segundos. O talento fica igual.",
-    "Art. 5.º — A vaca é defesa central: bola que lhe cai em cima ressalta. A bosta que deixa não conta como assistência.",
-    "Art. 6.º — O pombo e o vento (a partir dos 20 toques) não obedecem ao árbitro. Nem a ninguém.",
-    "Art. 7.º — O veredicto final é sempre “não selecionado”. É tradição da casa."
+    "Art. 1.º — Dá toques na bola com o dedo. \"A gente pode meter o pé…\", mas o ecrã não aguenta.",
+    "Art. 2.º — A bola não pode tocar no chão. O chão, como se vê, não está em condições.",
+    "Art. 3.º — Acerta no olheiro com a bola: durante 8 segundos, cada toque vale 2. Sem olheiro, vale 1 e um suspiro.",
+    "Art. 4.º — Acerta nas chuteiras e a bola cresce durante 6 segundos. O talento fica igual.",
+    "Art. 5.º — A vaca é defesa central: bola que lhe caia em cima ressalta. A bosta que deixa não conta como assistência.",
+    "Art. 6.º — O pombo e o vento (a partir dos 20 toques) desviam a bola sem aviso prévio. Não estão inscritos, mas participam.",
+    "Art. 7.º — O resultado é sempre \"não selecionado\". Recursos por escrito, a analisar quando o inspector acordar."
   ],
   "recorde_frases": [
-    "NOVO RECORDE! Está lá, está lá, ESTÁ LÁ!",
-    "Recorde pessoal! O júri continua a dizer que não.",
-    "Bateste o teu recorde! O olheiro tomou notas. A lápis.",
-    "RECORDE! Nem o campo desmanchado te trava!",
-    "Novo máximo! A vaca levantou-se para aplaudir."
+    "Recorde! O júri diz que não, mas mais baixinho.",
+    "Recorde! O olheiro deixou cair o monóculo.",
+    "Recorde batido! O teu processo subiu de secretária.",
+    "Recorde! Até a vaca parou de pastar para ver.",
+    "Recorde! Vai, vai, Xinxers-câmara: isto fica gravado."
   ]
 };
