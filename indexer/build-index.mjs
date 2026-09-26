@@ -160,19 +160,25 @@ async function findPasswordInput(page) {
 }
 
 async function unlock(page, password) {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // A página muda enquanto o login acontece: o campo pode desaparecer a meio de uma tentativa.
+  // Cada tentativa é curta e protegida; no fim só interessa se o campo ainda lá está.
+  for (let attempt = 0; attempt < 5; attempt++) {
     const hit = await findPasswordInput(page);
     if (!hit) return;
-    console.log('  campo de password encontrado, a desbloquear…');
-    await hit.input.fill(password);
-    const submit = hit.frame.locator('button[type=submit], input[type=submit], form button').filter({ visible: true }).first();
-    if (await submit.count()) await submit.click().catch(() => hit.input.press('Enter'));
-    else await hit.input.press('Enter');
+    console.log(`  campo de password encontrado, a desbloquear (tentativa ${attempt + 1})…`);
+    try {
+      await hit.input.fill(password, { timeout: 5000 });
+      const submit = hit.frame.locator('button[type=submit], input[type=submit], form button').filter({ visible: true }).first();
+      if (await submit.count()) await submit.click({ timeout: 5000 });
+      else await hit.input.press('Enter', { timeout: 5000 });
+    } catch (e) {
+      console.log(`  (tentativa interrompida: ${e.message.split('\n')[0]})`);
+    }
     await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
     await page.waitForTimeout(2500);
   }
   if (await findPasswordInput(page)) {
-    throw new Error('A galeria continua a pedir password depois de 3 tentativas.');
+    throw new Error('A galeria continua a pedir password depois de 5 tentativas.');
   }
 }
 
