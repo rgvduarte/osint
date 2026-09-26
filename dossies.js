@@ -4,6 +4,7 @@
 import { TEXTOS } from './jogo-textos.js';
 import { TEXTOS as TOQUES } from './toques-textos.js';
 import { TEXTOS as SOFA } from './sofa-textos.js';
+import { TEXTOS as BERLIM } from './berlim-textos.js';
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -87,6 +88,13 @@ export const DOSSIES = [
     target: 'sofa'
   },
   {
+    id: 'berlim',
+    emoji: '🍩',
+    label: `Jogar: ${BERLIM.nome_jogo}`,
+    action: 'jogo',
+    target: 'berlim'
+  },
+  {
     id: 'regulamento',
     emoji: '🏆',
     label: 'Regulamento do passatempo',
@@ -109,5 +117,13 @@ export const DOSSIES = [
     tab: 'Auto de ocorrência',
     title: 'Regulamento do sofá',
     html: SOFA.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
+  },
+  {
+    id: 'regulamento-berlim',
+    emoji: '🏖️',
+    label: 'Regulamento da praia',
+    tab: 'Capitania de Sesimbra',
+    title: 'Regulamento da praia',
+    html: BERLIM.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
   }
 ];

@@ -76,7 +76,7 @@ Enquanto não são descobertos, chamam a atenção à vez: o chapéu abana (com 
 
 ## Jogos
 
-Por baixo da Xinxers-câmara há três minijogos, cada um com o seu leaderboard. Os textos foram escritos por três humoristas, escolhidos por um editor e verificados contra factos inventados. Os regulamentos aparecem também no menu Dossiês.
+Por baixo da Xinxers-câmara há quatro minijogos, cada um com o seu leaderboard. Os textos foram escritos por três humoristas, escolhidos por um editor e verificados contra factos inventados. Os regulamentos aparecem também no menu Dossiês.
 
 - **Voa, Ricardo, Voa!** (`jogo.js`, textos em `jogo-textos.js`). Tipo Flappy Bird: a cara do noivo, de chapéu de hélice, a fugir de garrafas-paródia (Jaque Daniels, Dom Pérignão, Zé Corvo…). Os power-ups são do casamento: aliança (5 s invencível), copo-d'água (câmara lenta), fatia de bolo (+5), ramo da noiva (pontos a dobrar) e flash do inspector (limpa as garrafas). Quem ficar no topo ganha uma garrafa de queijo.
 - **A repescagem** (`toques.js`, textos em `toques-textos.js`). Em miúdo, o Ricardo foi a um casting para gravar um anúncio com o Cristiano Ronaldo e não foi selecionado. Aqui tenta outra vez, a dar toques na bola num campo "desmanchado, cheio de pedras" e de bosta, como no [vídeo](https://www.youtube.com/watch?v=gXk6PRzooq0). Toca-se na bola do lado contrário àquele para onde se quer que ela vá. No campo aparecem:
@@ -90,6 +90,13 @@ Por baixo da Xinxers-câmara há três minijogos, cada um com o seu leaderboard.
 
 - **Dardos do sofá** (`sofa.js`, textos em `sofa-textos.js`). Uma noite, com o Ricardo, o inspector bebeu uma garrafa de whisky e aterrou de cabeça na folga entre duas almofadas das costas de um sofá, onde se deixou ficar. Aqui a cabeça dele (da foto KO) é o dardo e a folga é o alvo. Cada cabeçada tem dois toques: o primeiro fixa a mira na horizontal e o segundo na vertical. São 3 rondas de 3 cabeçadas, e a mira fica mais tonta a cada ronda. Pontos: folga 50, mesmo ao lado 25, almofadas das costas 10, assento 2, resto 0. O sofá é um desenho inspirado numa foto do inspector (a foto não é publicada).
 
+- **Olha a bola de Berlim!** (`berlim.js`, textos em `berlim-textos.js`). Num verão, a Inês vendeu bolas de Berlim da Berlineta na praia de Sesimbra. Neste jogo tipo Angry Birds, ela atira-as a porcos de fato de banho escondidos em estruturas de praia: torre de nadador-salvador, geleiras, pranchas, castelo de areia.
+  - Arrasta-se para trás e larga-se para atirar.
+  - Com a bola no ar, um toque rebenta-a em creme e empurra tudo à volta.
+  - São 3 níveis. Cada porco vale 1000; cada nível limpo vale 2000, mais 1500 por bola que sobre.
+  - A física usa o [Matter.js](https://brm.io/matter-js/) (`vendor/matter.min.js`, licença MIT), que só carrega quando o jogo aparece no ecrã.
+  - As caras da Inês (`assets/ines-*.jpg`) foram recortadas de fotos dadas pelo inspector. Quando ela derruba um porco, põe a língua de fora.
+
 **Leaderboards partilhados.** Enquanto `FIREBASE_DB` (no topo de `placar.js`) estiver vazio, cada telemóvel só vê os seus resultados. Para um leaderboard de todos os convidados:
 
 1. Em [console.firebase.google.com](https://console.firebase.google.com): *Criar projeto* (o Analytics pode ficar desligado) → *Build → Realtime Database → Criar base de dados* (localização: Bélgica, `europe-west1`) → *Começar no modo bloqueado*.
@@ -98,18 +105,18 @@ Por baixo da Xinxers-câmara há três minijogos, cada um com o seu leaderboard.
    {
      "rules": {
        "$jogo": {
-         ".read": "$jogo === 'voo' || $jogo === 'toques' || $jogo === 'sofa'",
+         ".read": "$jogo === 'voo' || $jogo === 'toques' || $jogo === 'sofa' || $jogo === 'berlim'",
          ".indexOn": ["score"],
          "$id": {
-           ".write": "($jogo === 'voo' || $jogo === 'toques' || $jogo === 'sofa') && !data.exists()",
-           ".validate": "newData.hasChildren(['name', 'score', 't']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 5000 && newData.child('t').val() == now",
+           ".write": "($jogo === 'voo' || $jogo === 'toques' || $jogo === 'sofa' || $jogo === 'berlim') && !data.exists()",
+           ".validate": "newData.hasChildren(['name', 'score', 't']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 50000 && newData.child('t').val() == now",
            "$outro": { ".validate": false }
          }
        }
      }
    }
    ```
-   Qualquer pessoa pode ler os três leaderboards (`voo`, `toques` e `sofa`) e acrescentar resultados; ninguém pode alterar nem apagar os que já lá estão, nem juntar campos além de nome, pontos e hora.
+   Qualquer pessoa pode ler os quatro leaderboards (`voo`, `toques`, `sofa` e `berlim`) e acrescentar resultados; ninguém pode alterar nem apagar os que já lá estão, nem juntar campos além de nome, pontos e hora.
 3. Copia o URL da base de dados (algo como `https://xinxers-default-rtdb.europe-west1.firebasedatabase.app`) para `FIREBASE_DB` em `placar.js`.
 
 O leaderboard é à base da confiança: quem souber usar o `curl` consegue inventar um resultado. Antes de entregar o prémio, confirma o vencedor na consola do Firebase (*Realtime Database → Dados*), onde podes também apagar batotas.
