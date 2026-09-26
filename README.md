@@ -86,7 +86,7 @@ Por baixo da Xinxers-câmara há dois minijogos, cada um com o seu leaderboard. 
   - um pombo, que desvia a bola;
   - vento, a partir dos 20 toques.
 
-  No fim de cada take, o júri do casting dá o veredicto: é sempre "não selecionado".
+  No fim de cada take, o júri do casting dá o veredicto: é sempre "não selecionado". A partir do primeiro fim de partida, o vídeo fica a rodar por baixo do jogo, sem som e em loop (`youtube-nocookie.com`, só carrega nessa altura).
 
 **Leaderboards partilhados.** Enquanto `FIREBASE_DB` (no topo de `placar.js`) estiver vazio, cada telemóvel só vê os seus resultados. Para um leaderboard de todos os convidados:
 
