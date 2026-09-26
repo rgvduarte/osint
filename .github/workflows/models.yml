@@ -1,0 +1,34 @@
+name: Obter modelos
+
+# Descarrega os modelos InsightFace (buffalo_s) e faz commit em models/.
+# w600k_mbf.onnx: reconhecimento ArcFace (MobileFaceNet, WebFace600K), 512 dimensões.
+# Licença InsightFace: modelos pré-treinados só para uso não comercial.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  models:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descarregar buffalo_s
+        run: |
+          mkdir -p models /tmp/m
+          curl -fsSL -o /tmp/m/buffalo_s.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_s.zip
+          unzip -o /tmp/m/buffalo_s.zip -d /tmp/m
+          ls -la /tmp/m /tmp/m/* || true
+          cp "$(find /tmp/m -name 'w600k_mbf.onnx' | head -1)" models/
+          sha256sum models/*.onnx
+      - name: Commit
+        run: |
+          git config user.name "inspector-xinxers[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add models/
+          git diff --cached --quiet && exit 0
+          git commit -m "Modelo ArcFace w600k_mbf (InsightFace buffalo_s)"
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0; sleep 5; done
+          exit 1
