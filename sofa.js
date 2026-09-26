@@ -309,7 +309,7 @@ export function initSofa(root) {
 
   function drawAim() {
     const T = TONTURA[g.ronda];
-    const ghost = g.ronda === 2 && !calmo(); // na última ronda vê a dobrar
+    const ghost = g.ronda >= 1 && !calmo(); // a partir da 2.ª ronda vê a dobrar
     const line = (x0, y0, x1, y1, a) => {
       ctx.globalAlpha = a;
       ctx.strokeStyle = '#d8322a'; ctx.lineWidth = 3; ctx.setLineDash([10, 7]);
