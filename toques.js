@@ -2,7 +2,7 @@
 // selecionado para o anúncio com o Cristiano; aqui tenta outra vez, num campo desmanchado,
 // cheio de pedras e de bosta. Cada toque conta; se a bola cair, o júri volta a dizer que não.
 import { TEXTOS } from './toques-textos.js';
-import { criarPlacar, ligarSubmissao, load, save } from './placar.js';
+import { criarPlacar, ligarSubmissao, mostrarPainel, calmo, load, save } from './placar.js';
 
 export const VIDEO = 'https://www.youtube.com/watch?v=gXk6PRzooq0';
 
@@ -80,8 +80,8 @@ export function initToques(root) {
         if (list.every((h) => Math.abs(h.x - x) > (h.w + w) / 2 + 8)) { list.push({ tipo, x, w }); return; }
       }
     };
-    for (let i = 0; i < 4; i++) add('pedra', rnd(18, 30));
-    for (let i = 0; i < 3; i++) add('bosta', 26);
+    for (let i = 0; i < 3; i++) add('pedra', rnd(18, 30));
+    for (let i = 0; i < 2; i++) add('bosta', 26);
     return list;
   }
 
@@ -117,14 +117,15 @@ export function initToques(root) {
     const reach = b.r * (g.chuteiras > 0 ? 2.1 : 1.5) + 8;
     const dx = b.x - px, dy = b.y - py;
     if (!fromKeyboard && dx * dx + dy * dy > reach * reach) { g.ripples.push({ x: px, y: py, life: 0.35 }); return; }
-    if (g.cool > 0) return;
+    // enquanto a bola ainda sobe depressa, não há toque (senão, metralhar colava-a ao teto)
+    if (g.cool > 0 || b.vy < -60) { g.ripples.push({ x: px, y: py, life: 0.35 }); return; }
     g.cool = COOLDOWN;
     b.vy = -KICK * rnd(0.97, 1.03);
     b.vx = Math.max(-1.2, Math.min(1.2, dx / b.r)) * 230 + rnd(-25, 25);
     b.spin = b.vx / 30;
     g.kid.kick = 0.25;
     // "A gente pode defender e a merda pá bola": salvar a bola rente ao chão, por cima da bosta, suja-a
-    if (b.y + b.r > GROUND - 36 && g.ground.some((q) => q.tipo === 'bosta' && Math.abs(q.x - b.x) < q.w / 2 + 12)) {
+    if (b.y + b.r > GROUND - 70 && g.ground.some((q) => q.tipo === 'bosta' && Math.abs(q.x - b.x) < q.w / 2 + 12)) {
       if (!g.suja) say(fala('suja'), '#e0a060');
       g.suja = 6;
     }
@@ -165,7 +166,7 @@ export function initToques(root) {
     b.rot += b.spin * dt;
     if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * 0.7; b.spin = -b.spin; }
     if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx) * 0.7; b.spin = -b.spin; }
-    if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * 0.4; }
+    // não há teto: a bola pode sair por cima do ecrã e volta a cair (bater no teto e voltar logo dava para metralhar)
 
     // miúdo: corre atrás da bola, com atraso
     const kid = g.kid;
@@ -234,18 +235,18 @@ export function initToques(root) {
     g.ripples = g.ripples.filter((rp) => rp.life > 0);
 
     // a bola caiu: onde?
-    if (b.y + b.r >= GROUND + 6) {
-      const h = g.ground.find((q) => Math.abs(q.x - b.x) < q.w / 2); // onde toca o fundo da bola
-      fall(h ? h.tipo : 'relva');
-    }
+    // (a bola cai em cima de uma pedra ou da bosta quando lhe toca no topo, como se vê no desenho)
+    const h = g.ground.find((q) => Math.abs(q.x - b.x) < q.w / 2 + b.r * 0.3 && b.y + b.r >= GROUND - (q.tipo === 'pedra' ? q.w * 0.45 : 16));
+    if (h) fall(h.tipo);
+    else if (b.y + b.r >= GROUND + 6) fall('relva');
   }
 
   // a bola caiu: o jogo congela e entra o rodapé da reportagem; só depois vem o júri
-  const REPLAY = 1.4;
+  const REPLAY = 2;
   function fall(onde) {
     setMode('falling');
     g.fall = { onde, t: 0 };
-    g.ball.y = GROUND + 6 - g.ball.r;
+    if (onde === 'relva') g.ball.y = GROUND + 6 - g.ball.r;
   }
 
   function die(onde, fugiu = false) {
@@ -258,7 +259,8 @@ export function initToques(root) {
     const v = [...TEXTOS.veredictos].sort((a, b) => a.min - b.min).filter((q) => g.score >= q.min).pop();
     ui.verdict.textContent = v ? v.texto : '';
     resetPainel(g.score > 0);
-    ui.over.hidden = false;
+    mostrarPainel(ui);
+    placar.render(); // entretanto, outros convidados podem ter jogado
   }
 
   // ---- desenho
@@ -409,7 +411,7 @@ export function initToques(root) {
   // rodapé de reportagem de televisão, como no vídeo, mas com o nome do Ricardo
   function drawRodape(frase, t) {
     const R = TEXTOS.rodape;
-    const slide = Math.min(1, t / 0.35);
+    const slide = calmo() ? 1 : Math.min(1, t / 0.35);
     const x0 = -W * (1 - slide) ** 2;
     const y = GROUND - 195;
     ctx.save();
@@ -422,11 +424,11 @@ export function initToques(root) {
     ctx.fillStyle = '#e3a22a'; ctx.fillRect(0, y + 26, nw + 60, 3);
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(nome, 14, y + 14);
-    ctx.font = '700 9px Archivo, system-ui, sans-serif';
+    ctx.font = '700 11px Archivo, system-ui, sans-serif';
     ctx.fillStyle = 'rgba(18,17,16,.72)'; ctx.fillRect(nw, y + 8, ctx.measureText(R.canal).width + 14, 18);
     ctx.fillStyle = '#e3a22a';
     ctx.fillText(R.canal, nw + 7, y + 17);
-    fitFont(frase, 14, W - 40, 'italic 600', 'Archivo, system-ui, sans-serif');
+    fitFont(frase, 16, W - 40, 'italic 600', 'Archivo, system-ui, sans-serif');
     ctx.fillStyle = '#fff';
     ctx.fillText(frase, 12, y + 46);
     ctx.restore();
@@ -438,9 +440,10 @@ export function initToques(root) {
 
     if (!g) {
       // antes de começar: a bola a saltitar no pé do miúdo
-      const bob = Math.abs(Math.sin(performance.now() / 380)) * 30;
+      // (ao lado, para não tapar a cara; parada se o sistema pedir menos movimento)
+      const bob = calmo() ? 0 : Math.abs(Math.sin(performance.now() / 380)) * 30;
       drawKid(W / 2, 0, 0);
-      drawBall({ x: W / 2 + 14, y: GROUND - 40 - bob - R0, r: R0, rot: 0 });
+      drawBall({ x: W / 2 + 46, y: GROUND - R0 - bob, r: R0, rot: 0 });
     } else {
       const b = g.ball;
       // vento
@@ -464,6 +467,11 @@ export function initToques(root) {
       }
       drawKid(g.kid.x, g.kid.kick, g.kid.joy);
       drawBall(b, g.suja > 0);
+      if (b.y + b.r < 0) {
+        // a bola saiu por cima: marcador no topo
+        ctx.fillStyle = '#d8322a'; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(b.x, 4); ctx.lineTo(b.x - 9, 18); ctx.lineTo(b.x + 9, 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
       for (const rp of g.ripples) {
         ctx.strokeStyle = `rgba(216,50,42,${rp.life / 0.35})`; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.arc(rp.x, rp.y, 22 - rp.life * 30, 0, Math.PI * 2); ctx.stroke();
@@ -514,7 +522,8 @@ export function initToques(root) {
     raf = requestAnimationFrame(loop);
   }
   // só anima quando o jogo está visível
-  const io = new IntersectionObserver(([e]) => {
+  const io = new IntersectionObserver((entries) => {
+    const e = entries[entries.length - 1];
     cancelAnimationFrame(raf);
     if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); }
     else if (mode === 'playing') die('relva', true);
@@ -536,14 +545,22 @@ export function initToques(root) {
   document.addEventListener('keydown', (e) => {
     if (!(e.code === 'Space' || e.code === 'ArrowUp')) return;
     if (e.target.closest('input, textarea, button, a, dialog')) return;
+    if (mode === 'playing' || mode === 'falling') {
+      e.preventDefault();
+      if (e.repeat || mode === 'falling') return; // manter a tecla premida não joga sozinho
+      // pelo teclado, o toque pede tempo certo: a bola tem de estar a descer, perto do pé
+      const b = g.ball;
+      if (b.vy > 0 && b.y + b.r > GROUND - 90) kick(b.x + rnd(-8, 8), b.y + b.r * 0.5, true);
+      else g.cool = COOLDOWN;
+      return;
+    }
+    if (mode !== 'intro' || e.repeat) return;
     const r = canvas.getBoundingClientRect();
     if (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) < r.height * 0.6) return; // o jogo tem de estar à vista
     e.preventDefault();
-    if (mode === 'intro') return start();
-    // pelo teclado, só se a bola estiver a descer e ao alcance do pé
-    if (mode === 'playing' && g.ball.vy > -100 && g.ball.y > H * 0.35) kick(g.ball.x + rnd(-8, 8), g.ball.y + g.ball.r * 0.5, true);
+    start();
   });
-  ui.again.addEventListener('click', start);
+  ui.again.addEventListener('click', () => { ui.again.blur(); start(); });
 
   placar.render();
   draw();

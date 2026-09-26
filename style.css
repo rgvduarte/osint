@@ -251,6 +251,7 @@ body.ressaca main, body.ressaca .hero { animation: ressaca 2.4s ease-in-out infi
   color: var(--muted);
 }
 
+main > * { min-width: 0; } /* uma palavra comprida não pode alargar a página */
 main {
   max-width: 720px;
   margin: 0 auto;
@@ -814,8 +815,9 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .pt-title {
   margin: 0;
   min-width: 0;
-  font-size: clamp(24px, 6.4vw, 34px);
+  font-size: clamp(20px, 6.4vw, 34px);
   line-height: 1.04;
+  overflow-wrap: anywhere;
 }
 .pt-text {
   position: relative;
@@ -866,13 +868,17 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .screen.playing canvas { touch-action: none; }
 .over {
   position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 18px;
   background: rgba(18, 17, 16, .86);
   color: #f6efe0;
   animation: drop .2s ease-out;
 }
 .over[hidden] { display: none; }
+/* centrado quando cabe; quando não cabe, começa no topo e faz scroll (em vez de cortar o carimbo) */
+.over > :first-child { margin-top: auto; }
+.over > :last-child { margin-bottom: auto; }
+.over-title:focus { outline: none; }
 .over-title {
   margin: 0;
   font: 400 34px/1 var(--cartoon);
@@ -937,19 +943,27 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 /* ------------------------------------------------------------ repescagem: toques na bola */
 
 .toques .prize { white-space: pre-line; transform: rotate(-8deg); }
+.toques .pt-intro { padding-right: 104px; }
+@media (max-width: 420px) { .toques .pt-intro { padding-right: 92px; } }
+/* ecrãs muito estreitos: o carimbo do prémio sobe para cima da pasta e o título fica com a largura toda */
+@media (max-width: 380px) {
+  .jogo .prize { top: -46px; right: 4px; }
+  .jogo .pt-intro, .toques .pt-intro { padding-right: 0; }
+}
 .toques .screen { background: #cfe3f0; }
 .over-stamp {
   padding: 2px 10px 0;
   border: 3px solid var(--red);
   border-radius: 8px;
-  color: var(--red);
+  color: #b3241d;
+  border-color: #b3241d;
   background: rgba(241, 228, 198, .95);
   font: 400 18px/1.2 var(--cartoon);
   text-transform: uppercase;
   transform: rotate(-6deg);
 }
 .over { overflow-y: auto; }
-.toques .over { gap: 6px; padding: 12px 16px; }
+.toques .over { gap: 6px; padding: 24px 16px 12px; }
 .toques .over-title { font-size: 28px; }
 .toques .over-text { margin: 0; font-size: 14px; line-height: 1.3; }
 .toques .over-name input { padding: 8px 12px; }
