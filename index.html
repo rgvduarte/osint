@@ -4,56 +4,78 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Inspector Xinxers</title>
-  <meta name="description" content="Tira uma selfie e o Inspector Xinxers encontra todas as fotos da galeria em que apareces.">
-  <meta name="theme-color" content="#14161c">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔎</text></svg>">
+  <meta name="description" content="Casamento Inês &amp; Ricardo. Tira uma selfie e o Inspector Xinxers encontra-te nas fotos. By Buildity.ai">
+  <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='13' cy='13' r='8' fill='none' stroke='%23111' stroke-width='3'/><path d='M19 19l8 8' stroke='%23111' stroke-width='3' stroke-linecap='round'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <nav class="topbar">
+    <span class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
+      Inspector Xinxers
+    </span>
+    <a class="by" href="https://buildity.ai" target="_blank" rel="noopener">by <strong>Buildity.ai</strong></a>
+  </nav>
+
   <header class="hero">
-    <div class="badge" aria-hidden="true">🔎</div>
-    <h1>Inspector Xinxers</h1>
-    <p class="tagline">Tira uma selfie. O inspector procura-te em todas as fotos da galeria.</p>
-    <p class="index-status" id="indexStatus">A abrir o arquivo…</p>
+    <p class="kicker">Inês &amp; Ricardo · 5 de junho de 2026</p>
+    <h1>Inspector <em>Xinxers</em></h1>
+    <p class="lede">
+      Alcunha oficial, atribuída pelo noivo. Agora é hora de a merecer:
+      mostra a tua cara ao inspector e cada foto do casamento vai ser vasculhada até apareceres.
+    </p>
+    <p class="index-status" id="indexStatus">A abrir o dossier…</p>
   </header>
 
   <main>
-    <section class="card" id="captureCard">
-      <h2><span class="step">1</span> Mostra a tua cara</h2>
+    <section class="panel" id="captureCard">
+      <header class="panel-head">
+        <span class="num">01</span>
+        <h2>Identifica o suspeito</h2>
+      </header>
+
       <div class="camera" id="camera">
         <video id="video" playsinline muted></video>
         <div class="camera-guide" aria-hidden="true"></div>
         <div class="camera-idle" id="cameraIdle">
-          <button class="btn primary" id="startCam">📷 Ligar câmara</button>
+          <button class="btn primary" id="startCam">Ligar câmara</button>
         </div>
       </div>
+
       <div class="actions">
         <button class="btn primary" id="snap" hidden>Tirar selfie</button>
         <label class="btn ghost">
-          🖼️ Carregar foto
+          Escolher foto
           <input type="file" id="fileInput" accept="image/*" hidden>
         </label>
       </div>
+
       <div class="clues" id="clues" hidden>
-        <p class="clues-title">Pistas recolhidas <small>(junta mais uma ou duas selfies com ângulos diferentes para melhores resultados)</small></p>
+        <p class="clues-title">Provas recolhidas <span>· toca para remover</span></p>
         <div class="clue-row" id="clueRow"></div>
       </div>
+
       <p class="msg" id="captureMsg" role="status"></p>
-      <p class="privacy">🔒 A tua selfie é analisada só neste dispositivo. Não é enviada para lado nenhum.</p>
+      <p class="fine">A tua cara não sai do teu telemóvel. O inspector é discreto.</p>
+      <p class="fine engine" id="engineMsg" aria-live="polite"></p>
     </section>
 
-    <section class="card" id="resultsCard" hidden>
-      <div class="results-head">
-        <h2><span class="step">2</span> <span id="resultsTitle">Resultados</span></h2>
-        <label class="rigor">
-          <span>Mais fotos</span>
-          <input type="range" id="threshold" min="0.40" max="0.65" step="0.01" value="0.52" aria-label="Rigor da comparação">
-          <span>Mais certeza</span>
-        </label>
-      </div>
+    <section class="panel" id="resultsCard" hidden>
+      <header class="panel-head results-head">
+        <span class="num">02</span>
+        <h2 id="resultsTitle">Resultados</h2>
+      </header>
+      <label class="rigor">
+        <span>Mais fotos</span>
+        <input type="range" id="threshold" min="0.40" max="0.65" step="0.01" value="0.52" aria-label="Rigor da comparação">
+        <span>Mais certeza</span>
+      </label>
       <p class="msg" id="resultsMsg"></p>
       <div class="grid" id="grid"></div>
     </section>
@@ -68,7 +90,7 @@
       <div class="lb-bar">
         <span id="lbInfo"></span>
         <span class="lb-actions">
-          <a class="btn ghost small" id="lbOpen" target="_blank" rel="noopener">Abrir original ↗</a>
+          <a class="btn ghost small" id="lbOpen" target="_blank" rel="noopener">Abrir original</a>
           <button class="btn primary small" id="lbClose">Fechar</button>
         </span>
       </div>
@@ -76,7 +98,8 @@
   </dialog>
 
   <footer>
-    <p>Caso resolvido por <strong>Inspector Xinxers</strong> · reconhecimento facial com <a href="https://github.com/vladmandic/face-api" target="_blank" rel="noopener">face-api</a></p>
+    <p>Nenhum convidado foi interrogado durante a investigação.</p>
+    <p class="made">Inspector Xinxers · by <a href="https://buildity.ai" target="_blank" rel="noopener">Buildity.ai</a></p>
   </footer>
 
   <script type="module" src="app.js"></script>
