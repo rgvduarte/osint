@@ -28,7 +28,7 @@ const els = {
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
   wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
   wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
-  stamp: $('stamp'), nothing: $('nothing'), toast: $('toast'), peekImg: document.querySelector('#peek img'),
+  stamp: $('stamp'), nothing: $('nothing'), hatHint: $('hatHint'), koButton: $('koButton'), toast: $('toast'), peekImg: document.querySelector('#peek img'),
 };
 
 const state = {
@@ -557,7 +557,35 @@ function flyHat() {
 
 // Três toques no chapéu: cartaz de procurado.
 let hatTaps = [];
+// ---- Easter eggs à espera de serem descobertos
+// Cada um chama a atenção à vez (o chapéu abana, o carimbo carimba, o rastilho treme) até
+// alguém lhe tocar; o telemóvel lembra-se dos que já foram descobertos.
+const FOUND_KEY = 'xinxers-descobertos';
+const found = new Set();
+try { for (const k of JSON.parse(localStorage.getItem(FOUND_KEY) || '[]')) found.add(k); } catch {}
+
+function discover(key) {
+  found.add(key);
+  try { localStorage.setItem(FOUND_KEY, JSON.stringify([...found])); } catch {}
+  els.hatHint.hidden = found.has('hat');
+}
+
+const TEASERS = [['hat', () => els.hat], ['stamp', () => els.stamp], ['destruct', () => els.destruct]];
+let teaseTurn = 0;
+function tease() {
+  if (document.hidden || document.querySelector('dialog[open]')) return;
+  const waiting = TEASERS.filter(([key]) => !found.has(key));
+  if (!waiting.length) return;
+  const el = waiting[teaseTurn++ % waiting.length][1]();
+  if (el.classList.contains('fast') || el.classList.contains('fly') || el.closest('.boom')) return;
+  el.classList.remove('tease');
+  void el.offsetWidth; // reinicia a animação
+  el.classList.add('tease');
+  setTimeout(() => el.classList.remove('tease'), 1100);
+}
+
 function tapHat() {
+  discover('hat');
   els.hat.classList.remove('fast');
   void els.hat.offsetWidth; // reinicia a animação
   els.hat.classList.add('fast');
@@ -589,6 +617,7 @@ function secretWords(e) {
 
 // A mensagem autodestrói-se (mais ou menos).
 function selfDestruct() {
+  discover('destruct');
   if (els.mission.classList.contains('boom')) return;
   els.mission.classList.add('boom');
   setTimeout(() => {
@@ -617,13 +646,16 @@ els.fileInput.addEventListener('change', async () => {
 els.lbClose.addEventListener('click', () => els.lightbox.close());
 els.hat.addEventListener('click', tapHat);
 els.destruct.addEventListener('click', selfDestruct);
-els.stamp.addEventListener('click', () => showPoster('report'));
+els.stamp.addEventListener('click', () => { discover('stamp'); showPoster('report'); });
+els.koButton.addEventListener('click', () => showPoster('report'));
 document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
 
 loadIndex();
+els.hatHint.hidden = found.has('hat');
+setInterval(tease, 3200);
 loadInspector();
 // Adianta o download dos modelos enquanto o convidado lê a página.
 setTimeout(() => loadModels().catch(() => {}), 1500);

@@ -84,6 +84,62 @@ a { color: inherit; }
   90% { transform: translate(0, -20px) rotate(3deg); }
 }
 
+/* pistas para os easter eggs */
+.hint {
+  position: absolute;
+  left: calc(50% + 62px);
+  top: 50px;
+  z-index: 4;
+  display: flex; align-items: center; gap: 2px;
+  font: 400 17px/1 var(--cartoon);
+  letter-spacing: .02em;
+  color: var(--red);
+  transform: rotate(-8deg);
+  animation: bob 1.8s ease-in-out infinite;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.hint[hidden] { display: none; }
+.hint svg {
+  width: 38px; height: 24px;
+  fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+}
+@keyframes bob { 50% { transform: rotate(-8deg) translate(-4px, -3px); } }
+
+.hat.tease { animation: wiggle 1s ease; }
+@keyframes wiggle {
+  15% { transform: rotate(-12deg) translateY(-4px); }
+  35% { transform: rotate(10deg); }
+  55% { transform: rotate(-7deg); }
+  75% { transform: rotate(4deg); }
+}
+.stamp.tease { animation: thump .8s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes thump {
+  30% { transform: rotate(8deg) translateY(-10px) scale(1.3); }
+  55% { transform: rotate(8deg) scale(.9); }
+}
+.destruct.tease { animation: jitter .6s linear; }
+@keyframes jitter {
+  20% { transform: translateX(-2px) rotate(-1deg); }
+  40% { transform: translateX(2px) rotate(1deg); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+}
+
+/* rastilho aceso antes de "autodestruir-se" */
+.fuse {
+  display: inline-block;
+  width: 9px; height: 9px;
+  margin-right: 7px;
+  vertical-align: 1px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c2 0 25%, var(--yellow) 45%, #ff7a1a 75%);
+  box-shadow: 0 0 8px 3px rgba(255, 140, 30, .75);
+  animation: spark .35s steps(2) infinite alternate;
+}
+@keyframes spark { to { transform: scale(.6) rotate(45deg); box-shadow: 0 0 4px 1px rgba(255, 140, 30, .5); } }
+.mission.boom .fuse, .mission.singed .fuse { display: none; }
+
 .logo {
   margin: 0;
   font: 400 clamp(52px, 15vw, 104px)/.92 var(--cartoon);
@@ -439,7 +495,19 @@ h2 {
   margin-top: 14px;
 }
 .nothing[hidden] { display: none; }
+.ko {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  animation: bob-ko 2.2s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+@keyframes bob-ko { 50% { transform: translateY(-4px) rotate(-3deg); } }
 .nothing img {
+  display: block;
   width: 96px; height: 96px; flex: none;
   border-radius: 50%;
   border: 3px solid var(--ink);
@@ -575,6 +643,10 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
   white-space: nowrap;
 }
 .toast[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hint, .tease, .fuse, .ko, .hat .prop { animation: none !important; }
+}
 
 /* ------------------------------------------------------------ rodapé */
 

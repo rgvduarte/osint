@@ -17,6 +17,10 @@
   <header class="hero">
     <a class="by" href="https://buildity.ai" target="_blank" rel="noopener">by <b>Buildity.ai</b></a>
 
+    <span class="hint" id="hatHint" aria-hidden="true">
+      <svg viewBox="0 0 50 30"><path d="M46 8C34 4 18 8 6 22M6 22l1-10M6 22l10-2"/></svg>
+      toca 3×!
+    </span>
     <button class="hat" id="hat" aria-label="Chapéu do inspector">
       <svg viewBox="0 0 120 100" aria-hidden="true">
         <g class="prop-mast"><path d="M60 34V16"/></g>
@@ -42,7 +46,7 @@
         <b id="photoCount">centenas de</b> fotos do casamento da Inês e do Ricardo e diz-te onde apareces.
       </p>
       <p class="index-status" id="indexStatus">A abrir o arquivo…</p>
-      <button class="destruct" id="destruct">Esta mensagem vai autodestruir-se.</button>
+      <button class="destruct" id="destruct"><span class="fuse" aria-hidden="true"></span>Esta mensagem vai autodestruir-se.</button>
       <div class="puff" aria-hidden="true"><span>PUF!</span></div>
     </section>
 
@@ -88,7 +92,9 @@
       </div>
       <p class="msg" id="resultsMsg"></p>
       <div class="nothing" id="nothing" hidden>
-        <img src="assets/inspector-ko-peek.jpg" alt="O inspector, de óculos escuros, deitado numa cadeira do pátio">
+        <button class="ko" id="koButton" aria-label="Ver o relatório de ocorrência do inspector">
+          <img src="assets/inspector-ko-peek.jpg" alt="">
+        </button>
         <p>Sem provas. Ou não vieste ao casamento… ou passaste a festa como o inspector.</p>
       </div>
       <div class="film">

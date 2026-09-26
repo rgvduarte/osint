@@ -58,6 +58,8 @@ Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o
 
 ## Easter eggs
 
+Enquanto não são descobertos, chamam a atenção à vez: o chapéu abana (com a nota "toca 3×!"), o carimbo carimba e o rastilho da autodestruição faísca. O telemóvel lembra-se dos que já foram descobertos (`localStorage`); com "reduzir movimento" ligado no sistema não há animações.
+
 - O inspector espreita no visor enquanto analisa (de madrugada, e de vez em quando, ainda em recuperação).
 - 3 toques no chapéu: cartaz de PROCURADO. 6 toques (ou escrever "xinxers" no teclado): o chapéu levanta voo.
 - Carimbo CONFIDENCIAL (ou escrever "copo"): relatório de ocorrência.
