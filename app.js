@@ -1,3 +1,4 @@
+import { DOSSIES } from './dossies.js';
 // Inspector Xinxers — compara uma selfie com o índice pré-calculado (data/faces.json).
 // Tudo corre no browser; a selfie nunca sai do dispositivo.
 
@@ -28,6 +29,8 @@ const els = {
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
   wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
   wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
+  menuBtn: $('menuBtn'), menuList: $('menuList'), page: $('page'), pageTab: $('pageTab'),
+  pageTitle: $('pageTitle'), pageBody: $('pageBody'), pageClose: $('pageClose'),
   maybeBox: $('maybeBox'), maybeButton: $('maybeButton'), maybeGrid: $('maybeGrid'),
   zipBox: $('zipBox'), zipButton: $('zipButton'), zipNote: $('zipNote'),
   stamp: $('stamp'), nothing: $('nothing'), hatHint: $('hatHint'), koButton: $('koButton'), toast: $('toast'), peekImg: document.querySelector('#peek img'),
@@ -786,6 +789,45 @@ function selfDestruct() {
   }, 1000);
 }
 
+// ---------------------------------------------------------------- menu de dossiês
+
+function buildMenu() {
+  els.menuList.replaceChildren(...DOSSIES.map((d) => {
+    const li = document.createElement('li');
+    li.setAttribute('role', 'none');
+    const b = document.createElement('button');
+    b.setAttribute('role', 'menuitem');
+    b.innerHTML = `<span aria-hidden="true">${d.emoji}</span><span></span>`;
+    b.lastChild.textContent = d.label;
+    b.addEventListener('click', () => { toggleMenu(false); openDossie(d); });
+    li.append(b);
+    return li;
+  }));
+}
+
+function toggleMenu(open = els.menuList.hidden) {
+  els.menuList.hidden = !open;
+  els.menuBtn.setAttribute('aria-expanded', String(open));
+  if (open) els.menuList.querySelector('button')?.focus();
+}
+
+function openDossie(d) {
+  if (d.action === 'ressaca') return ressaca();
+  els.pageTab.textContent = d.tab || 'Dossiê';
+  els.pageTitle.textContent = d.title || d.label;
+  els.pageBody.innerHTML = d.html; // conteúdo fixo do próprio site (dossies.js)
+  els.page.scrollTop = 0;
+  els.page.showModal();
+}
+
+// Modo ressaca: a página fica como o inspector no fim do copo-d'água, durante uns segundos.
+function ressaca() {
+  document.body.classList.add('ressaca');
+  toast('Modo ressaca ativado. Bebe água.');
+  clearTimeout(ressaca.t);
+  ressaca.t = setTimeout(() => document.body.classList.remove('ressaca'), 7000);
+}
+
 // ---------------------------------------------------------------- util
 
 function setMsg(el, text, warn = false) {
@@ -810,6 +852,12 @@ els.stamp.addEventListener('click', () => { discover('stamp'); showPoster('repor
 els.koButton.addEventListener('click', () => showPoster('report'));
 els.zipButton.addEventListener('click', downloadZip);
 els.maybeButton.addEventListener('click', showMaybe);
+els.menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+document.addEventListener('click', (e) => { if (!els.menuList.hidden && !e.target.closest('.menu')) toggleMenu(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !els.menuList.hidden) toggleMenu(false); });
+els.pageClose.addEventListener('click', () => els.page.close());
+els.page.addEventListener('click', (e) => { if (e.target === els.page) els.page.close(); });
+buildMenu();
 document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
