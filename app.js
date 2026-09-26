@@ -21,10 +21,12 @@ const $ = (id) => document.getElementById(id);
 const els = {
   indexStatus: $('indexStatus'), video: $('video'), startCam: $('startCam'), cameraIdle: $('cameraIdle'),
   snap: $('snap'), fileInput: $('fileInput'), clues: $('clues'), clueRow: $('clueRow'), captureMsg: $('captureMsg'),
-  engineMsg: $('engineMsg'),
+  clueCount: $('clueCount'), engineMsg: $('engineMsg'), photoCount: $('photoCount'),
   resultsCard: $('resultsCard'), resultsTitle: $('resultsTitle'), resultsMsg: $('resultsMsg'), grid: $('grid'),
   threshold: $('threshold'), lightbox: $('lightbox'), lbImg: $('lbImg'), lbBox: $('lbBox'), lbInfo: $('lbInfo'),
   lbOpen: $('lbOpen'), lbClose: $('lbClose'), lbImgWrap: $('lbImgWrap'),
+  hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
+  wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
 };
 
 const state = {
@@ -32,6 +34,7 @@ const state = {
   refs: [],          // descritores das selfies
   matches: [],       // [{photo, face, dist}] ordenado
   stream: null,
+  inspector: null,   // descritor da cara do próprio inspector (easter egg)
 };
 
 let faceapi = null;
@@ -118,16 +121,24 @@ async function loadIndex() {
     const faces = raw.faces.map((f) => ({ p: f.p, b: f.b, d: decodeDescriptor(f.d) }));
     state.index = { photos: raw.photos, faces, generatedAt: raw.generatedAt };
     if (!raw.photos.length) {
-      els.indexStatus.textContent = 'O arquivo ainda está vazio — falta correr o indexador.';
+      els.indexStatus.textContent = 'Arquivo vazio: falta revelar o rolo.';
       els.indexStatus.classList.add('warn');
       return;
     }
     const when = raw.generatedAt ? new Date(raw.generatedAt).toLocaleDateString('pt-PT') : '';
-    els.indexStatus.textContent = `${raw.photos.length} fotos · ${faces.length} caras no arquivo${when ? ` · atualizado ${when}` : ''}`;
+    els.indexStatus.textContent = `${raw.photos.length} fotogramas · ${faces.length} caras no arquivo${when ? ` · revelado ${when}` : ''}`;
+    els.photoCount.textContent = raw.photos.length.toLocaleString('pt-PT');
   } catch (e) {
-    els.indexStatus.textContent = `Não consegui abrir o arquivo de caras (${e.message}).`;
+    els.indexStatus.textContent = `Não consegui abrir o arquivo (${e.message}).`;
     els.indexStatus.classList.add('warn');
   }
+}
+
+async function loadInspector() {
+  try {
+    const res = await fetch('data/inspector.json');
+    if (res.ok) state.inspector = decodeDescriptor((await res.json()).d);
+  } catch {}
 }
 
 function decodeDescriptor(b64) {
@@ -148,10 +159,11 @@ async function startCamera() {
     els.video.srcObject = state.stream;
     await els.video.play();
     els.cameraIdle.hidden = true;
-    els.snap.hidden = false;
-    setMsg(els.captureMsg, 'Cara no oval, boa luz, sem óculos de sol. O inspector agradece.');
+    document.body.classList.add('live');
+    setMsg(els.captureMsg, 'Cara ao centro, boa luz, sem óculos escuros. Carrega no botão vermelho.');
   } catch (e) {
-    setMsg(els.captureMsg, 'Sem acesso à câmara. Usa “Escolher foto”: também dá para tirar uma selfie aí.', true);
+    state.stream = null;
+    setMsg(els.captureMsg, 'Sem acesso à câmara. Toca em “Rolo”: dá para escolher uma foto ou tirar uma selfie aí.', true);
   }
   loadModels().catch(() => {});
 }
@@ -191,10 +203,13 @@ async function addClue(canvas) {
   }
   setMsg(els.captureMsg, 'O inspector está a examinar o suspeito…');
   els.snap.disabled = true;
+  document.body.classList.add('busy');
+  const peek = showPeek();
   try {
     const found = await detectWithFallback(canvas);
     if (!found.length) {
       setMsg(els.captureMsg, 'Nem sinal de cara. Tenta com mais luz e de frente para a câmara.', true);
+      peek.done('Nem sinal de cara…');
       return;
     }
     // Na selfie, a cara que interessa é a maior.
@@ -202,14 +217,21 @@ async function addClue(canvas) {
     state.refs.push(main.descriptor);
     renderClue(canvas, main.detection.box);
     setMsg(els.captureMsg, found.length > 1
-      ? 'Apanhei mais do que uma cara: fiquei com a maior.'
-      : 'Prova registada. Junta outra selfie, de outro ângulo, para afinar a busca.');
+      ? 'Apareceu mais do que uma cara: fiquei com a maior.'
+      : 'Registado. Outra selfie, de outro ângulo, afina a busca.');
     search();
+    const caught = state.matches.some((m) => m.dist < 0.42);
+    peek.done(caught ? 'Apanhado!' : 'Hmm… nada por agora.');
+    if (state.inspector && distance(main.descriptor, state.inspector) < 0.5) {
+      setTimeout(() => showWanted('Alto! Não te podes investigar a ti próprio, Inspector. Mas pronto, as tuas fotos estão aí em baixo.'), 900);
+    }
   } catch (e) {
     console.error(e);
     setMsg(els.captureMsg, `Algo correu mal ao analisar a imagem (${e.message}).`, true);
+    peek.done('Ups.');
   } finally {
     els.snap.disabled = false;
+    document.body.classList.remove('busy');
   }
 }
 
@@ -222,16 +244,22 @@ function renderClue(canvas, box) {
   c.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, 120, 120);
   const btn = document.createElement('button');
   btn.className = 'clue';
-  btn.title = 'Remover esta pista';
+  btn.title = 'Tirar esta selfie da investigação';
   btn.append(c);
   btn.addEventListener('click', () => {
     state.refs.splice([...els.clueRow.children].indexOf(btn), 1);
     btn.remove();
-    els.clues.hidden = !state.refs.length;
+    updateClues();
     search();
   });
   els.clueRow.append(btn);
-  els.clues.hidden = false;
+  updateClues();
+}
+
+function updateClues() {
+  const n = state.refs.length;
+  els.clues.hidden = !n;
+  els.clueCount.textContent = n === 1 ? '1 selfie' : `${n} selfies`;
 }
 
 // ---------------------------------------------------------------- busca
@@ -260,45 +288,82 @@ function search() {
 }
 
 function verdict(d) {
-  if (d < 0.42) return { label: 'Culpado!', cls: 'high' };
-  if (d < 0.50) return { label: 'Suspeito forte', cls: 'mid' };
-  return { label: 'Talvez', cls: 'low' };
+  if (d < 0.42) return { label: 'ÉS TU!', cls: 'high' };
+  if (d < 0.50) return { label: 'PROVÁVEL', cls: 'mid' };
+  return { label: 'TALVEZ', cls: 'low' };
 }
 
 function renderResults() {
   const t = +els.threshold.value;
   const hits = state.matches.filter((m) => m.dist <= t);
   els.resultsCard.hidden = false;
-  els.resultsTitle.textContent = hits.length === 0 ? 'Sem provas'
-    : hits.length === 1 ? 'Caso resolvido: 1 foto' : `Caso resolvido: ${hits.length} fotos`;
+  els.resultsTitle.textContent = hits.length;
   setMsg(els.resultsMsg, hits.length
-    ? 'Toca numa foto para a ver em grande. Faltam fotos? Puxa o cursor para “Mais fotos”.'
-    : 'Nada com este rigor. Puxa o cursor para “Mais fotos” ou junta outra selfie.');
+    ? 'Toca num fotograma para o ver maior. Faltam fotos? Alarga a lupa para “mais fotos”.'
+    : 'Nada marcado. Alarga a lupa para “mais fotos” ou tira outra selfie.');
   els.grid.replaceChildren(...hits.map(renderCard));
 }
 
+// Traço de lápis de cera à volta da cara: um laço à mão que passa do ponto de partida.
+const LOOP = 'M62 6C28 2 4 24 6 52s28 44 54 42 38-24 35-48S70 4 44 9c-8 2-14 5-18 9';
+
+const CELL_RATIO = 3 / 2; // fotogramas da folha de contactos (ver .cell no CSS)
+
+// cellRatio: proporção da célula onde a foto está encaixada (object-fit: contain);
+// null quando a caixa tem exatamente a proporção da foto.
+function mark(photo, box, cls, cellRatio = null) {
+  let iw = 1, ih = 1, ox = 0, oy = 0;
+  if (cellRatio) {
+    const ar = photo.w / photo.h;
+    if (ar >= cellRatio) { ih = cellRatio / ar; oy = (1 - ih) / 2; } else { iw = ar / cellRatio; ox = (1 - iw) / 2; }
+  }
+  const [x, y, w, h] = box;
+  const cx = ox + (x + w / 2) * iw, cy = oy + (y + h / 2) * ih;
+  const rw = Math.max(0.12, w * iw * 1.9), rh = Math.max(0.12, h * ih * 1.8);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('class', `mark ${cls}`);
+  svg.setAttribute('aria-hidden', 'true');
+  Object.assign(svg.style, {
+    left: `${(cx - rw / 2) * 100}%`, top: `${(cy - rh / 2) * 100}%`,
+    width: `${rw * 100}%`, height: `${rh * 100}%`,
+    transform: `rotate(${((x * 97 + y * 53) % 1) * 24 - 12}deg)`,
+  });
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', LOOP);
+  svg.append(path);
+  return svg;
+}
+
+const frameNo = (m) => String(m.face.p + 1).padStart(3, '0');
+
 function renderCard(m) {
   const v = verdict(m.dist);
-  const card = document.createElement('button');
-  card.className = 'tile';
+  const frame = document.createElement('button');
+  frame.className = 'frame';
+  const cell = document.createElement('div');
+  cell.className = 'cell';
   const img = new Image();
   img.loading = 'lazy';
   img.decoding = 'async';
-  img.alt = '';
+  img.alt = `Fotograma ${frameNo(m)}`;
   img.src = m.photo.t || m.photo.s;
-  img.addEventListener('error', () => card.classList.add('broken'), { once: true });
-  const tag = document.createElement('span');
-  tag.className = `tag ${v.cls}`;
-  tag.textContent = v.label;
-  card.append(img, tag);
-  card.addEventListener('click', () => openLightbox(m));
-  return card;
+  img.addEventListener('error', () => frame.classList.add('broken'), { once: true });
+  cell.append(img, mark(m.photo, m.face.b, v.cls, CELL_RATIO));
+  const cap = document.createElement('span');
+  cap.className = 'cap';
+  cap.innerHTML = `<span>▸ ${frameNo(m)}</span><span class="v ${v.cls}"></span>`;
+  cap.lastChild.textContent = v.label;
+  frame.append(cell, cap);
+  frame.addEventListener('click', () => openLightbox(m));
+  return frame;
 }
 
-// ---------------------------------------------------------------- lightbox
+// ---------------------------------------------------------------- lupa
 
 function openLightbox(m) {
-  const [x, y, w, h] = m.face.b;
+  const v = verdict(m.dist);
   els.lbImgWrap.style.setProperty('--r', m.photo.w / m.photo.h);
   els.lbImg.src = m.photo.t || m.photo.s;
   // Carrega a versão maior por cima, se existir.
@@ -307,10 +372,62 @@ function openLightbox(m) {
     big.onload = () => { if (els.lightbox.open) els.lbImg.src = big.src; };
     big.src = m.photo.f;
   }
-  Object.assign(els.lbBox.style, { left: `${x * 100}%`, top: `${y * 100}%`, width: `${w * 100}%`, height: `${h * 100}%` });
-  els.lbInfo.textContent = `${verdict(m.dist).label} · semelhança ${Math.round(Math.max(0, 1 - m.dist) * 100)}%`;
+  els.lbBox.replaceChildren(mark(m.photo, m.face.b, v.cls));
+  els.lbInfo.textContent = `▸ FOTOGRAMA ${frameNo(m)} · ${v.label} · ${Math.round(Math.max(0, 1 - m.dist) * 100)}% PARECIDO`;
   els.lbOpen.href = m.photo.f || m.photo.s;
   els.lightbox.showModal();
+}
+
+// ---------------------------------------------------------------- o inspector em pessoa
+
+const PEEK_LINES = ['Hmm… suspeito!', 'Deixa cá ver…', 'Vai, vai, Xinxers-lupa!', 'Elementar…'];
+const PEEK_MIN_MS = 1500;
+
+// Enquanto a selfie é analisada, o inspector espreita no visor num braço de mola.
+function showPeek() {
+  const started = Date.now();
+  els.peekSays.textContent = PEEK_LINES[Math.floor(Math.random() * PEEK_LINES.length)];
+  els.peek.classList.add('show');
+  return {
+    done(line) {
+      const wait = Math.max(0, PEEK_MIN_MS - (Date.now() - started));
+      setTimeout(() => {
+        els.peekSays.textContent = line;
+        setTimeout(() => els.peek.classList.remove('show'), 1300);
+      }, wait);
+    },
+  };
+}
+
+function showWanted(text) {
+  els.wantedText.textContent = text;
+  if (!els.wanted.open) els.wanted.showModal();
+}
+
+// Três toques no chapéu: cartaz de procurado.
+let hatTaps = [];
+function tapHat() {
+  els.hat.classList.remove('fast');
+  void els.hat.offsetWidth; // reinicia a animação
+  els.hat.classList.add('fast');
+  clearTimeout(tapHat.t);
+  tapHat.t = setTimeout(() => els.hat.classList.remove('fast'), 900);
+  const now = Date.now();
+  hatTaps = [...hatTaps.filter((t) => now - t < 1500), now];
+  if (hatTaps.length >= 3) {
+    hatTaps = [];
+    showWanted('Crime: fotografar o casamento inteiro. Recompensa: um copo no copo-d’água.');
+  }
+}
+
+// A mensagem autodestrói-se (mais ou menos).
+function selfDestruct() {
+  if (els.mission.classList.contains('boom')) return;
+  els.mission.classList.add('boom');
+  setTimeout(() => {
+    els.mission.classList.add('singed');
+    els.destruct.textContent = '…afinal era só fumo. A missão continua.';
+  }, 1000);
 }
 
 // ---------------------------------------------------------------- util
@@ -323,7 +440,8 @@ function setMsg(el, text, warn = false) {
 // ---------------------------------------------------------------- eventos
 
 els.startCam.addEventListener('click', startCamera);
-els.snap.addEventListener('click', () => addClue(snapFromVideo()));
+// O obturador também liga a câmara, se ainda estiver desligada.
+els.snap.addEventListener('click', () => (state.stream ? addClue(snapFromVideo()) : startCamera()));
 els.fileInput.addEventListener('change', async () => {
   const file = els.fileInput.files[0];
   els.fileInput.value = '';
@@ -331,8 +449,13 @@ els.fileInput.addEventListener('change', async () => {
 });
 els.threshold.addEventListener('input', renderResults);
 els.lbClose.addEventListener('click', () => els.lightbox.close());
+els.hat.addEventListener('click', tapHat);
+els.destruct.addEventListener('click', selfDestruct);
+els.wantedClose.addEventListener('click', () => els.wanted.close());
+els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
 
 loadIndex();
+loadInspector();
 // Adianta o download dos modelos enquanto o convidado lê a página.
 setTimeout(() => loadModels().catch(() => {}), 1500);

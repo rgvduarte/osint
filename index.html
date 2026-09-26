@@ -5,79 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Inspector Xinxers</title>
   <meta name="description" content="Casamento Inês &amp; Ricardo. Tira uma selfie e o Inspector Xinxers encontra-te nas fotos. By Buildity.ai">
-  <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='13' cy='13' r='8' fill='none' stroke='%23111' stroke-width='3'/><path d='M19 19l8 8' stroke='%23111' stroke-width='3' stroke-linecap='round'/></svg>">
+  <meta name="theme-color" content="#f1e4c6">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 100'><ellipse cx='60' cy='70' rx='54' ry='14' fill='%238b8e93' stroke='%232a1f17' stroke-width='6'/><path d='M30 66C30 42 38 32 60 32s30 10 30 34Z' fill='%238b8e93' stroke='%232a1f17' stroke-width='6'/><path d='M31 56h58v10H31z' fill='%232a1f17'/><path d='M60 32V14' stroke='%232a1f17' stroke-width='5'/><ellipse cx='60' cy='12' rx='30' ry='7' fill='%23d8322a' stroke='%232a1f17' stroke-width='5'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Luckiest+Guy&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <nav class="topbar">
-    <span class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
-      Inspector Xinxers
-    </span>
-    <a class="by" href="https://buildity.ai" target="_blank" rel="noopener">by <strong>Buildity.ai</strong></a>
-  </nav>
-
   <header class="hero">
-    <p class="kicker">Inês &amp; Ricardo · 5 de junho de 2026</p>
-    <h1>Inspector <em>Xinxers</em></h1>
-    <p class="lede">
-      Alcunha oficial, atribuída pelo noivo. Agora é hora de a merecer:
-      mostra a tua cara ao inspector e cada foto do casamento vai ser vasculhada até apareceres.
-    </p>
-    <p class="index-status" id="indexStatus">A abrir o dossier…</p>
+    <a class="by" href="https://buildity.ai" target="_blank" rel="noopener">by <b>Buildity.ai</b></a>
+
+    <button class="hat" id="hat" aria-label="Chapéu do inspector">
+      <svg viewBox="0 0 120 100" aria-hidden="true">
+        <g class="prop-mast"><path d="M60 34V16"/></g>
+        <g class="prop"><ellipse cx="60" cy="13" rx="30" ry="6"/></g>
+        <circle class="hub" cx="60" cy="13" r="5"/>
+        <ellipse class="brim" cx="60" cy="72" rx="54" ry="13"/>
+        <path class="crown" d="M31 68C31 44 39 33 60 33s29 11 29 35Z"/>
+        <path class="crease" d="M60 35c-6 8-6 16 0 21"/>
+        <path class="band" d="M31 58h58v10H31z"/>
+      </svg>
+    </button>
+
+    <h1 class="logo"><span>Inspector</span> <span>Xinxers</span></h1>
+    <p class="aka">alcunha oficial, atribuída pelo noivo</p>
   </header>
 
   <main>
-    <section class="panel" id="captureCard">
-      <header class="panel-head">
-        <span class="num">01</span>
-        <h2>Identifica o suspeito</h2>
-      </header>
+    <section class="mission" id="mission">
+      <span class="tab">Missão ultra-secreta</span>
+      <span class="stamp" aria-hidden="true">Confidencial</span>
+      <p class="briefing">
+        A tua missão, se a aceitares: tira uma selfie. O inspector vasculha as
+        <b id="photoCount">centenas de</b> fotos do casamento da Inês e do Ricardo e diz-te onde apareces.
+      </p>
+      <p class="index-status" id="indexStatus">A abrir o arquivo…</p>
+      <button class="destruct" id="destruct">Esta mensagem vai autodestruir-se.</button>
+      <div class="puff" aria-hidden="true"><span>PUF!</span></div>
+    </section>
 
-      <div class="camera" id="camera">
+    <section class="gadget" aria-label="Tirar selfie">
+      <span class="plate">Xinxers-câmara</span>
+      <div class="viewfinder" id="camera">
         <video id="video" playsinline muted></video>
-        <div class="camera-guide" aria-hidden="true"></div>
-        <div class="camera-idle" id="cameraIdle">
-          <button class="btn primary" id="startCam">Ligar câmara</button>
+        <div class="af" aria-hidden="true"></div>
+        <span class="led" aria-hidden="true"></span>
+        <div class="vf-idle" id="cameraIdle">
+          <button class="btn" id="startCam">Vai, vai,<br>Xinxers-câmara!</button>
+        </div>
+        <div class="peek" id="peek" aria-hidden="true">
+          <span class="bubble" id="peekSays">Hmm… suspeito!</span>
+          <img src="assets/inspector-peek.jpg" alt="">
+          <svg class="arm" viewBox="0 0 120 40" preserveAspectRatio="none"><path d="M0 20l12-14 12 28 12-28 12 28 12-28 12 28 12-28 12 28 12-14"/></svg>
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn primary" id="snap" hidden>Tirar selfie</button>
-        <label class="btn ghost">
-          Escolher foto
+      <div class="controls">
+        <label class="text-btn">
+          Rolo
           <input type="file" id="fileInput" accept="image/*" hidden>
         </label>
+        <button class="red-button" id="snap" aria-label="Tirar selfie"><span></span></button>
+        <div class="clues" id="clues" hidden>
+          <div class="clue-row" id="clueRow"></div>
+          <span class="clue-count" id="clueCount"></span>
+        </div>
       </div>
 
-      <div class="clues" id="clues" hidden>
-        <p class="clues-title">Provas recolhidas <span>· toca para remover</span></p>
-        <div class="clue-row" id="clueRow"></div>
-      </div>
-
-      <p class="msg" id="captureMsg" role="status"></p>
-      <p class="fine">A tua cara não sai do teu telemóvel. O inspector é discreto.</p>
-      <p class="fine engine" id="engineMsg" aria-live="polite"></p>
+      <p class="msg" id="captureMsg" role="status">Cara ao centro, boa luz, sem óculos escuros.</p>
+      <p class="fine">A tua cara não sai do telemóvel. <span id="engineMsg" aria-live="polite"></span></p>
     </section>
 
-    <section class="panel" id="resultsCard" hidden>
-      <header class="panel-head results-head">
-        <span class="num">02</span>
-        <h2 id="resultsTitle">Resultados</h2>
-      </header>
-      <label class="rigor">
-        <span>Mais fotos</span>
-        <input type="range" id="threshold" min="0.40" max="0.65" step="0.01" value="0.52" aria-label="Rigor da comparação">
-        <span>Mais certeza</span>
+    <section class="evidence" id="resultsCard" hidden>
+      <div class="ev-head">
+        <h2>Provas</h2>
+        <span class="count">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M62 6C28 2 4 24 6 52s28 44 54 42 38-24 35-48S70 4 44 9c-8 2-14 5-18 9"/></svg>
+          <b id="resultsTitle">0</b>
+        </span>
+      </div>
+      <label class="loupe">
+        <span class="loupe-name">Xinxers-lupa</span>
+        <span class="loupe-range">
+          <span>mais fotos</span>
+          <input type="range" id="threshold" min="0.40" max="0.65" step="0.01" value="0.52" aria-label="Rigor da lupa">
+          <span>mais certeza</span>
+        </span>
       </label>
       <p class="msg" id="resultsMsg"></p>
-      <div class="grid" id="grid"></div>
+      <div class="film">
+        <div class="grid" id="grid"></div>
+      </div>
     </section>
   </main>
 
@@ -85,21 +105,29 @@
     <div class="lb-frame">
       <div class="lb-img" id="lbImgWrap">
         <img id="lbImg" alt="">
-        <div class="lb-box" id="lbBox"></div>
+        <div class="lb-mark" id="lbBox"></div>
       </div>
       <div class="lb-bar">
         <span id="lbInfo"></span>
         <span class="lb-actions">
-          <a class="btn ghost small" id="lbOpen" target="_blank" rel="noopener">Abrir original</a>
-          <button class="btn primary small" id="lbClose">Fechar</button>
+          <a class="text-btn light" id="lbOpen" target="_blank" rel="noopener">Abrir original ↗</a>
+          <button class="text-btn light" id="lbClose">Fechar</button>
         </span>
       </div>
     </div>
   </dialog>
 
+  <dialog id="wanted" class="wanted">
+    <p class="w-title">Procurado</p>
+    <img src="assets/inspector.jpg" alt="O Inspector Xinxers, de chapéu, gabardina e lupa">
+    <p class="w-name">Inspector Xinxers</p>
+    <p class="w-text" id="wantedText"></p>
+    <button class="btn" id="wantedClose">Vai, vai, fechar!</button>
+  </dialog>
+
   <footer>
-    <p>Nenhum convidado foi interrogado durante a investigação.</p>
-    <p class="made">Inspector Xinxers · by <a href="https://buildity.ai" target="_blank" rel="noopener">Buildity.ai</a></p>
+    <p>Nenhum convidado foi interrogado durante esta investigação.</p>
+    <a class="made" href="https://buildity.ai" target="_blank" rel="noopener">by Buildity.ai</a>
   </footer>
 
   <script type="module" src="app.js"></script>
