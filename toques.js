@@ -4,7 +4,8 @@
 import { TEXTOS } from './toques-textos.js';
 import { criarPlacar, ligarSubmissao, mostrarPainel, calmo, load, save } from './placar.js';
 
-export const VIDEO = 'https://www.youtube.com/watch?v=gXk6PRzooq0';
+const VIDEO_ID = 'gXk6PRzooq0';
+export const VIDEO = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
 
 const W = 360, H = 540;              // coordenadas lógicas do canvas
 const GROUND = H - 44;               // linha do chão
@@ -36,6 +37,7 @@ export function initToques(root) {
     submit: root.querySelector('[data-submit]'),
     again: root.querySelector('[data-again]'),
     video: root.querySelector('[data-video]'),
+    prova: root.querySelector('[data-prova]'),
     board: root.querySelector('[data-board]'),
     boardNote: root.querySelector('[data-board-note]'),
   };
@@ -43,7 +45,24 @@ export function initToques(root) {
   face.src = 'assets/noivo-cara.jpg';
 
   for (const el of root.querySelectorAll('[data-t]')) el.textContent = TEXTOS[el.dataset.t];
-  if (ui.video) { ui.video.href = VIDEO; ui.video.textContent = TEXTOS.video_link; }
+  if (ui.video) ui.video.href = VIDEO;
+  const provaTitulo = root.querySelector('[data-prova-titulo]');
+  if (provaTitulo) provaTitulo.textContent = TEXTOS.video_link.replace(/^▶\s*/, '');
+
+  // Prova A: no primeiro fim de partida, o vídeo do campo desmanchado fica a rodar por baixo do jogo
+  // (sem som, que é a única forma de os telemóveis deixarem arrancar sozinho; em loop)
+  function mostrarProva() {
+    if (!ui.prova || ui.prova.dataset.on) return;
+    ui.prova.dataset.on = '1';
+    const f = document.createElement('iframe');
+    f.src = `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=${calmo() ? 0 : 1}&mute=1&playsinline=1&loop=1&playlist=${VIDEO_ID}&rel=0`;
+    f.title = 'Vídeo: «O campo tá desmanchado»';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin'; // o YouTube recusa embeds sem origem
+    ui.prova.querySelector('.prova-video').append(f);
+    ui.prova.hidden = false;
+  }
   root.querySelector('[data-powers]')?.replaceChildren(...Object.entries(EVENTOS).map(([id, e]) => {
     const li = document.createElement('li');
     li.innerHTML = '<span class="pw-emoji" aria-hidden="true"></span><b></b><span></span>';
@@ -260,6 +279,7 @@ export function initToques(root) {
     ui.verdict.textContent = v ? v.texto : '';
     resetPainel(g.score > 0);
     mostrarPainel(ui);
+    mostrarProva();
     placar.render(); // entretanto, outros convidados podem ter jogado
   }
 
