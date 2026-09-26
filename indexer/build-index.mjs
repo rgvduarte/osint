@@ -47,36 +47,75 @@ const IMG_RE = /\.(jpe?g|png|webp|avif)(\?|#|$)/i;
 async function collectFromGallery(url, password) {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ executablePath: env.CHROMIUM_PATH || undefined });
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const ctx = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+    locale: 'pt-PT',
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
+  });
   const page = await ctx.newPage();
   await fs.mkdir(DEBUG_DIR, { recursive: true });
 
+  // Regista pedidos de imagens e de dados, para diagnóstico e como fonte alternativa.
+  const netImages = new Map();
+  const apiCalls = new Set();
+  page.on('response', async (r) => {
+    const type = r.headers()['content-type'] || '';
+    const u = r.url();
+    if (type.startsWith('image/') && !/svg/.test(type)) netImages.set(u, +(r.headers()['content-length'] || 0));
+    else if (/json/.test(type)) apiCalls.add(`${new URL(u).host}${new URL(u).pathname}`);
+  });
+
   console.log(`→ a abrir ${new URL(url).origin}${new URL(url).pathname}`);
   await page.goto(url, { waitUntil: 'networkidle', timeout: 90_000 }).catch((e) => console.warn('  goto:', e.message));
+  await page.waitForTimeout(2000);
+  await describe(page, 'página inicial');
   if (password) await unlock(page, password);
   await page.screenshot({ path: path.join(DEBUG_DIR, '1-apos-login.png') });
+  await describe(page, 'depois do login');
 
   const found = new Map(); // chave = URL da versão maior
-  let stale = 0;
-  for (let round = 0; round < 400 && stale < 5; round++) {
-    const before = found.size;
-    for (const item of await page.evaluate(scrapeDom)) {
-      const key = item.full || item.src;
-      if (!found.has(key)) found.set(key, item);
+  const harvest = async () => {
+    for (const frame of page.frames()) {
+      const items = await frame.evaluate(scrapeDom).catch(() => []);
+      for (const item of items) {
+        const key = item.full || item.src;
+        if (!found.has(key)) found.set(key, item);
+      }
     }
+  };
+  await page.mouse.move(720, 600);
+  let stale = 0;
+  for (let round = 0; round < 600 && stale < 8; round++) {
+    const before = found.size;
+    await harvest();
     await clickLoadMore(page);
-    await page.evaluate(() => window.scrollBy(0, window.innerHeight * 0.9));
-    await page.waitForTimeout(900);
-    const atBottom = await page.evaluate(() => window.innerHeight + window.scrollY >= document.body.scrollHeight - 4);
-    stale = found.size === before && atBottom ? stale + 1 : 0;
+    // A roda do rato faz scroll no elemento debaixo do cursor, seja a janela ou um contentor interno.
+    await page.mouse.wheel(0, 900);
+    await page.evaluate(() => {
+      window.scrollBy(0, window.innerHeight * 0.9);
+      for (const el of document.querySelectorAll('*')) {
+        if (el.scrollHeight > el.clientHeight + 50 && /(auto|scroll)/.test(getComputedStyle(el).overflowY)) el.scrollTop += el.clientHeight * 0.9;
+      }
+    }).catch(() => {});
+    await page.waitForTimeout(1000);
+    stale = found.size === before ? stale + 1 : 0;
     if (round % 10 === 0) console.log(`  scroll ${round}: ${found.size} imagens`);
   }
+  await harvest();
 
-  await page.screenshot({ path: path.join(DEBUG_DIR, '2-fim-scroll.png'), fullPage: false });
+  await page.screenshot({ path: path.join(DEBUG_DIR, '2-fim-scroll.png') });
   await fs.writeFile(path.join(DEBUG_DIR, 'pagina.html'), await page.content());
-  const items = [...found.values()].filter(looksLikePhoto);
+  let items = [...found.values()].filter(looksLikePhoto);
   await fs.writeFile(path.join(DEBUG_DIR, 'imagens.json'), JSON.stringify(items, null, 2));
-  console.log(`✓ ${items.length} fotos encontradas (${found.size} imagens no total)`);
+
+  console.log(`✓ ${items.length} fotos no DOM (${found.size} imagens no total), ${netImages.size} imagens na rede`);
+  console.log('  chamadas JSON:', [...apiCalls].slice(0, 15).join('  ') || '(nenhuma)');
+  console.log('  exemplos:', items.slice(0, 5).map((i) => `\n    src=${i.src}\n    full=${i.full} (${i.w}x${i.h})`).join(''));
+
+  if (items.length < 3 && netImages.size) {
+    console.log('  poucas fotos no DOM: a usar as imagens vistas na rede');
+    items = [...netImages.entries()].filter(([u, size]) => !size || size > 30_000).map(([u]) => ({ src: u, full: u })).filter(looksLikePhoto);
+  }
 
   // Os downloads usam o mesmo contexto, para herdar os cookies da sessão desbloqueada.
   const fetchBytes = async (u) => {
@@ -87,25 +126,49 @@ async function collectFromGallery(url, password) {
   return { items, fetchBytes, close: () => browser.close() };
 }
 
-async function unlock(page, password) {
-  const selector = [
-    'input[type=password]',
-    'input[name*=pass i]', 'input[name*=senha i]', 'input[name*=pin i]', 'input[name*=code i]',
-    'input[placeholder*=pass i]', 'input[placeholder*=senha i]', 'input[placeholder*=código i]', 'input[placeholder*=code i]',
-  ].join(',');
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const input = page.locator(selector).filter({ visible: true }).first();
-    if (!(await input.count())) return;
-    console.log('  campo de password encontrado, a desbloquear…');
-    await input.fill(password);
-    const submit = page.locator('button[type=submit], input[type=submit], form button').filter({ visible: true }).first();
-    if (await submit.count()) await submit.click().catch(() => input.press('Enter'));
-    else await input.press('Enter');
-    await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
-    await page.waitForTimeout(1500);
+// Resumo em texto do estado da página, para perceber nos logs o que o browser está a ver.
+async function describe(page, when) {
+  const info = await page.evaluate(() => ({
+    title: document.title,
+    path: location.pathname,
+    imgs: document.images.length,
+    inputs: [...document.querySelectorAll('input')].filter((i) => i.offsetParent).map((i) => `${i.type}[${i.name || i.id || i.placeholder || ''}]`),
+    buttons: [...document.querySelectorAll('button, [role=button], input[type=submit]')].filter((b) => b.offsetParent).map((b) => (b.innerText || b.value || b.ariaLabel || '').trim().slice(0, 30)).filter(Boolean).slice(0, 12),
+    scripts: [...new Set([...document.scripts].map((s) => { try { return new URL(s.src).host; } catch { return null; } }).filter(Boolean))],
+    text: document.body?.innerText.replace(/\s+/g, ' ').slice(0, 300),
+  })).catch((e) => ({ error: e.message }));
+  console.log(`  [${when}] ${JSON.stringify(info)}`);
+  console.log(`  [${when}] frames: ${page.frames().map((f) => { try { return new URL(f.url()).host; } catch { return '?'; } }).join(', ')}`);
+}
+
+const PASSWORD_SELECTOR = [
+  'input[type=password]',
+  'input[name*=pass i]', 'input[name*=senha i]', 'input[name*=pin i]', 'input[name*=code i]',
+  'input[placeholder*=pass i]', 'input[placeholder*=senha i]', 'input[placeholder*=código i]', 'input[placeholder*=code i]',
+].join(',');
+
+async function findPasswordInput(page) {
+  for (const frame of page.frames()) {
+    const input = frame.locator(PASSWORD_SELECTOR).filter({ visible: true }).first();
+    if (await input.count().catch(() => 0)) return { frame, input };
   }
-  if (await page.locator(selector).filter({ visible: true }).count()) {
-    throw new Error('A galeria continua a pedir password depois de 3 tentativas (ver indexer/debug/).');
+  return null;
+}
+
+async function unlock(page, password) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const hit = await findPasswordInput(page);
+    if (!hit) return;
+    console.log('  campo de password encontrado, a desbloquear…');
+    await hit.input.fill(password);
+    const submit = hit.frame.locator('button[type=submit], input[type=submit], form button').filter({ visible: true }).first();
+    if (await submit.count()) await submit.click().catch(() => hit.input.press('Enter'));
+    else await hit.input.press('Enter');
+    await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+  }
+  if (await findPasswordInput(page)) {
+    throw new Error('A galeria continua a pedir password depois de 3 tentativas.');
   }
 }
 
