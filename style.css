@@ -490,6 +490,14 @@ h2 {
 .count svg path { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .count b { font: 400 30px/1 var(--cartoon); color: var(--red); }
 
+.zip {
+  margin-top: 16px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
+}
+.zip[hidden] { display: none; }
+.zip .btn:disabled { cursor: progress; opacity: .85; }
+.zip-note { margin: 0; flex: 1 1 220px; font-size: 14px; color: var(--muted); }
+
 .nothing {
   display: flex; align-items: center; gap: 16px;
   margin-top: 14px;

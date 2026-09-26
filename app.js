@@ -28,6 +28,7 @@ const els = {
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
   wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
   wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
+  zipBox: $('zipBox'), zipButton: $('zipButton'), zipNote: $('zipNote'),
   stamp: $('stamp'), nothing: $('nothing'), hatHint: $('hatHint'), koButton: $('koButton'), toast: $('toast'), peekImg: document.querySelector('#peek img'),
 };
 
@@ -405,8 +406,129 @@ function renderResults() {
     ? 'As mais prováveis primeiro. Toca num fotograma para o ver maior.'
     : '');
   els.grid.replaceChildren(...hits.map(renderCard));
+  state.hits = hits;
+  els.zipBox.hidden = !hits.length;
+  if (!state.zipping) {
+    els.zipButton.textContent = 'Vai, vai, Xinxers-zip!';
+    const what = hits.length === 1 ? 'a prova' : `as ${hits.length} provas`;
+    els.zipNote.textContent = `Leva ${what} num .zip (~${Math.max(1, Math.round(hits.length * 0.8))} MB). `
+      + 'Os noivos já pagaram ao fotógrafo, por isso a ti sai de graça.';
+  }
   return hits;
 }
+
+// ---------------------------------------------------------------- zip com as provas
+// As fotos vêm do CDN da galeria (permite CORS) e o zip é montado no próprio telemóvel,
+// em streaming, sem recomprimir os JPEG.
+const FFLATE = 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js';
+const ZIP_PARALLEL = 4;
+
+const slug = (v) => v.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+
+function readme(hits) {
+  const n = hits.length;
+  const sure = hits.filter((m) => verdict(m).cls === 'high').length;
+  return [
+    'INSPECTOR XINXERS · RELATÓRIO DE PROVAS',
+    'Casamento Inês & Ricardo · 5 de junho de 2026',
+    '',
+    `Provas recolhidas: ${n} fotografia${n === 1 ? '' : 's'} (${sure} com "és tu!" garantido).`,
+    'Os ficheiros estão ordenados do mais certo para o menos certo.',
+    '',
+    'NOTAS DO INSPECTOR',
+    '- As fotos marcadas "talvez" podem ser de um sósia. Nesse caso, parabéns: tens um gémeo no casamento.',
+    '- Se apareces em mais fotos do que os noivos, a Inês e o Ricardo querem ter uma conversa contigo.',
+    '- Os noivos disseram "sim" uma vez. Tu podes dizer "sim" a estas fotos quantas vezes quiseres.',
+    '- O Ricardo pediu para lembrar que a noiva é a Inês. As fotos em que pareces mais apaixonado por ela do que ele serão investigadas.',
+    '- Nenhum convidado foi interrogado. O inspector, esse, foi encontrado na horizontal no pátio.',
+    '',
+    'Caso encerrado.',
+    'by Buildity.ai',
+    '',
+  ].join('\r\n');
+}
+
+async function downloadZip() {
+  const hits = state.hits || [];
+  if (!hits.length || state.zipping) return;
+  state.zipping = true;
+  els.zipButton.disabled = true;
+  const say = (t) => { els.zipButton.textContent = t; };
+  try {
+    say('A carregar o camião…');
+    const { Zip, ZipPassThrough, strToU8 } = await import(FFLATE);
+    const parts = [];
+    let failed = null;
+    const zip = new Zip((err, chunk, final) => {
+      if (err) { failed = err; return; }
+      parts.push(chunk);
+      if (final) {
+        const url = URL.createObjectURL(new Blob(parts, { type: 'application/zip' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'provas-inspector-xinxers.zip';
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+    });
+    const add = (name, bytes) => {
+      const f = new ZipPassThrough(name);
+      zip.add(f);
+      f.push(bytes, true);
+    };
+    add('LEIA-ME.txt', strToU8(readme(hits)));
+
+    // descarrega em paralelo, mas junta ao zip pela ordem certa
+    let done = 0, next = 0, missing = 0;
+    const results = new Array(hits.length);
+    let written = 0;
+    const flush = () => {
+      while (written < hits.length && results[written] !== undefined) {
+        const bytes = results[written];
+        if (bytes) add(`${String(written + 1).padStart(3, '0')}-${slug(verdict(hits[written]))}.jpg`, bytes);
+        results[written] = null;
+        written++;
+      }
+    };
+    const worker = async () => {
+      while (next < hits.length) {
+        const i = next++;
+        const m = hits[i];
+        try {
+          const res = await fetch(m.photo.f || m.photo.s, { mode: 'cors' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          results[i] = new Uint8Array(await res.arrayBuffer());
+        } catch {
+          results[i] = false;
+          missing++;
+        }
+        done++;
+        say(`A empacotar provas… ${done}/${hits.length}`);
+        flush();
+      }
+    };
+    await Promise.all(Array.from({ length: ZIP_PARALLEL }, worker));
+    flush();
+    zip.end();
+    if (failed) throw failed;
+    say('Provas entregues!');
+    els.zipNote.textContent = missing
+      ? `${missing} foto${missing === 1 ? '' : 's'} fugiram à justiça (não descarregaram). As outras estão no zip.`
+      : 'Está tudo no zip, com um relatório do inspector lá dentro.';
+  } catch (e) {
+    console.error(e);
+    say('Vai, vai, Xinxers-zip!');
+    els.zipNote.textContent = `O camião das provas avariou (${e.message}). Tenta outra vez com melhor rede.`;
+  } finally {
+    state.zipping = false;
+    els.zipButton.disabled = false;
+    setTimeout(() => { if (!state.zipping) els.zipButton.textContent = 'Vai, vai, Xinxers-zip!'; }, 4000);
+  }
+}
+
+
 
 // Traço de lápis de cera à volta da cara: um laço à mão que passa do ponto de partida.
 const LOOP = 'M62 6C28 2 4 24 6 52s28 44 54 42 38-24 35-48S70 4 44 9c-8 2-14 5-18 9';
@@ -648,6 +770,7 @@ els.hat.addEventListener('click', tapHat);
 els.destruct.addEventListener('click', selfDestruct);
 els.stamp.addEventListener('click', () => { discover('stamp'); showPoster('report'); });
 els.koButton.addEventListener('click', () => showPoster('report'));
+els.zipButton.addEventListener('click', downloadZip);
 document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });

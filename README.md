@@ -56,6 +56,10 @@ Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o
 - Medido no índice real (1.788 fotos, 8.750 caras): encontra ~97% das fotos de quem aparece em 5+ fotos; quem não estava no casamento vê em média 1 foto errada (máximo 14 em 24 caras testadas). Descer o limiar para 3,0 só daria 99% com o triplo das fotos erradas.
 - Juntar 2–3 selfies com ângulos diferentes ajuda: cada cara conta pela selfie com que melhor pontua.
 
+## Descarregar as provas
+
+O botão **Vai, vai, Xinxers-zip!** junta num .zip todas as fotos encontradas (versão de 2000px, ~0,8 MB cada), numeradas do mais certo para o menos certo, com um `LEIA-ME.txt` do inspector sobre os noivos. O zip é montado no próprio telemóvel ([fflate](https://github.com/101arrowz/fflate)); o CDN da galeria permite pedidos de outros sites (CORS `*`).
+
 ## Easter eggs
 
 Enquanto não são descobertos, chamam a atenção à vez: o chapéu abana (com a nota "toca 3×!"), o carimbo carimba e o rastilho da autodestruição faísca. O telemóvel lembra-se dos que já foram descobertos (`localStorage`); com "reduzir movimento" ligado no sistema não há animações.
