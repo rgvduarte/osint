@@ -73,6 +73,7 @@ jobs:
         env:
           THUMBS: ${{ inputs.thumbs && '1' || '0' }}
           LIMIT: ${{ inputs.limit }}
+          OUT: ../data/index-arc.json
         run: node build-index.mjs
 
       # Capturas de ecrã e HTML da galeria: só quando falha, e por pouco tempo (o repositório é público).

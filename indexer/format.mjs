@@ -4,13 +4,13 @@
 //   base:   prefixo comum a todos os URLs de fotos
 //   photos: [s, f | 0, w, h, t?]        s/f sem o prefixo; f = 0 quando é igual a s
 //   faces:  [p, x, y, w, h, escala, q, μ, σ]
-//           caixa em frações da foto; q = base64 de 128 int8, descritor ≈ q * escala
+//           caixa em frações da foto; q = base64 do descritor em int8 (512 dimensões com ArcFace), descritor ≈ q * escala
 //           (erro de distância ~0,001); μ/σ = média e desvio das distâncias desta cara às
 //           200 mais próximas de uma coorte fixa da galeria, para normalizar a pontuação
 //           (S-norm) na app: caras "genéricas", parecidas com toda a gente, contam menos.
 // v1 (antigo): photos [{s, f, w, h, t}], faces [{p, b, d}] com d = base64 de 128 float32.
 
-export const MODEL = 'face-api ssdMobilenetv1 + faceRecognitionNet (128d)';
+export const MODEL = 'face-api ssdMobilenetv1 + landmarks68 → ArcFace w600k_mbf (512d, média com espelho)';
 
 // Coorte para a S-norm: tem de ser igual à da app (app.js, cohortStats).
 export const COHORT_SIZE = 800;
