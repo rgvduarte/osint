@@ -61,6 +61,7 @@ Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o
 - O inspector espreita no visor enquanto analisa (de madrugada, e de vez em quando, ainda em recuperação).
 - 3 toques no chapéu: cartaz de PROCURADO. 6 toques (ou escrever "xinxers" no teclado): o chapéu levanta voo.
 - Carimbo CONFIDENCIAL (ou escrever "copo"): relatório de ocorrência.
+- Se for o **noivo** a tirar a selfie: cadastro com a foto dele mascarado. O noivo é reconhecido por 40 caras de referência tiradas da galeria (`data/noivo.json`, gerado com `GROOM=2 node indexer/people.mjs`; o workflow **Analisar pessoas** confirma quem é quem pelo género/idade e por quem aparece junto com quem).
 - A mensagem da missão autodestrói-se. Sem provas: o inspector mostra como passou a festa. Mais de 250 fotos: "Celebridade!". Selfie do próprio inspector: não se pode investigar a si próprio.
 
 ## Privacidade: lê isto antes de publicar

@@ -37,6 +37,7 @@ const state = {
   matches: [],       // [{photo, face, dist}] ordenado
   stream: null,
   inspector: null,   // descritor da cara do próprio inspector (easter egg)
+  groom: null,       // caras de referência do noivo, tiradas da galeria (easter egg)
 };
 
 let faceapi = null;
@@ -141,6 +142,19 @@ async function loadInspector() {
     const res = await fetch('data/inspector.json');
     if (res.ok) state.inspector = decodeDescriptor((await res.json()).d);
   } catch {}
+  try {
+    const res = await fetch('data/noivo.json');
+    if (res.ok) state.groom = (await res.json()).faces.map(([scale, q]) => decodeInt8(q, scale));
+  } catch {}
+}
+
+// É o noivo? Média das 10 caras de referência mais próximas (ver indexer/people.mjs).
+// Calibrado no índice real: outras fotos do noivo ~0,32; noiva e família ≥ 0,57; gente de fora ≥ 0,70.
+const GROOM_DIST = 0.46;
+function isGroom(d) {
+  if (!state.groom) return false;
+  const ds = state.groom.map((g) => distance(d, g)).sort((a, b) => a - b).slice(0, 10);
+  return ds.reduce((s, x) => s + x, 0) / ds.length < GROOM_DIST;
 }
 
 // Formato do índice: ver indexer/format.mjs (v2 compacto; v1 ainda aceite).
@@ -242,13 +256,18 @@ async function addClue(canvas) {
       : 'Registado. Outra selfie, de outro ângulo, afina a busca.');
     search();
     const hits = collect(THRESHOLD);
-    if (hits.length > CELEBRITY) {
-      setMsg(els.captureMsg, `Estás em ${hits.length} fotos. Ou és o noivo, ou a noiva, ou tens um talento raro para aparecer.`);
+    const groom = isGroom(main.descriptor);
+    if (groom) {
+      setMsg(els.captureMsg, `Olha quem é: o noivo! Estás em ${hits.length} fotos.`);
+      peek.done('Apanhei o noivo!');
+      setTimeout(() => showPoster('groom', `Estás em ${hits.length} fotos do casamento, mas o inspector encontrou a prova mais comprometedora de todas: esta. Consta que a Inês a viu e casou-se na mesma.`), 1600);
+    } else if (hits.length > CELEBRITY) {
+      setMsg(els.captureMsg, `Estás em ${hits.length} fotos. Ou és a noiva, ou tens um talento raro para aparecer.`);
       peek.done('Celebridade!');
     } else {
       peek.done(hits.some((m) => m.score >= LIKELY_SCORE) ? 'Apanhado!' : hits.length ? 'Hmm… talvez.' : 'Nada… por agora.');
     }
-    if (state.inspector && distance(main.descriptor, state.inspector) < 0.44) {
+    if (!groom && state.inspector && distance(main.descriptor, state.inspector) < 0.44) {
       setTimeout(() => showWanted('Alto! Não te podes investigar a ti próprio, Inspector. Mas pronto, as tuas fotos estão aí em baixo.'), 900);
     }
   } catch (e) {
@@ -495,6 +514,10 @@ const POSTERS = {
   wanted: {
     title: 'Procurado', img: 'assets/inspector.jpg', name: 'Inspector Xinxers', button: 'Vai, vai, fechar!',
     alt: 'O Inspector Xinxers, de chapéu, gabardina e lupa',
+  },
+  groom: {
+    title: 'Cadastro', img: 'assets/noivo-mascarado.jpg', name: 'Suspeito: o noivo', button: 'Confesso!',
+    alt: 'O noivo mascarado: óculos brancos enormes, bigode pintado, dente a menos, camisa havaiana e casaco branco',
   },
   report: {
     title: 'Ocorrência', img: 'assets/inspector-ko.jpg', name: 'Inspector fora de serviço', button: 'Deixá-lo dormir',

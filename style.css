@@ -551,6 +551,10 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .w-name { margin: 12px 0 0; font: 400 30px/1 var(--cartoon); text-transform: uppercase; }
 .w-text { margin: 8px 0 16px; font-size: 16px; line-height: 1.35; }
 
+/* cadastro do noivo */
+.wanted.groom { background: #fbe7e4; }
+.wanted.groom img { max-height: 58vh; object-fit: cover; object-position: top; filter: none; }
+
 /* relatório de ocorrência (mesmo cartaz, em versão esquadra) */
 .wanted.report { background: #eef0f2; }
 .wanted.report .w-title { color: var(--ink); }
