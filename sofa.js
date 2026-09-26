@@ -16,7 +16,7 @@ const ZONAS = {
   quase: { pts: 25, emoji: '😵', txt: 'mesmo ao lado da folga' },
   almofada: { pts: 10, emoji: '🛋️', txt: 'resto das almofadas das costas' },
   assento: { pts: 2, emoji: '💺', txt: 'almofadas do assento' },
-  fora: { pts: 0, emoji: '🧱', txt: 'braço, parede, chão' },
+  fora: { pts: 0, emoji: '🧱', txt: 'braço e frente do sofá, parede, chão' },
 };
 // quanto a mira baloiça em cada ronda: velocidade e solavancos (px)
 const TONTURA = [{ v: 1, s: 0 }, { v: 1.35, s: 10 }, { v: 1.75, s: 22 }];
@@ -128,13 +128,14 @@ export function initSofa(root) {
   }
 
   // um toque: fixa a mira na horizontal, depois na vertical, e a cabeça voa
-  function tap() {
+  // (v = posição da mira no instante em que o dedo tocou; sem v, usa a de agora)
+  function tap(v) {
     if (mode === 'mira-x') {
-      g.aim.x = Math.max(4, Math.min(W - 4, mira('x')));
+      g.aim.x = Math.max(4, Math.min(W - 4, v ?? mira('x')));
       g.aimT = 0; g.phase = Math.random() * 6;
       setMode('mira-y');
     } else if (mode === 'mira-y') {
-      g.aim.y = Math.max(40, Math.min(H - 20, mira('y')));
+      g.aim.y = Math.max(40, Math.min(H - 20, v ?? mira('y')));
       g.flight = { x: g.aim.x, y: g.aim.y, t: 0, spin: (Math.random() < 0.5 ? -1 : 1) * 9 };
       setMode('voo');
     }
@@ -414,10 +415,19 @@ export function initSofa(root) {
   io.observe(canvas);
 
   // a jogar, o toque é imediato; antes, só um toque "limpo" começa (deslizar para fazer scroll não conta)
+  // Um toque conta quando o dedo sai sem ter deslizado: assim, deslizar faz scroll (touch-action: pan-y)
+  // e não gasta cabeçadas. A mira fica no sítio onde estava quando o dedo tocou.
+  let toque = null;
   canvas.addEventListener('pointerdown', (e) => {
     if (!jogando() || suspensa || !e.isPrimary) return; // (dois dedos não valem dois toques)
-    e.preventDefault();
-    tap();
+    toque = { x: e.clientX, y: e.clientY, t: e.timeStamp, modo: mode, v: mode === 'mira-x' ? mira('x') : mode === 'mira-y' ? mira('y') : null };
+  });
+  canvas.addEventListener('pointercancel', () => { toque = null; });
+  canvas.addEventListener('pointerup', (e) => {
+    const p = toque; toque = null;
+    if (!p || p.modo !== mode || suspensa) return;
+    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 12 || e.timeStamp - p.t > 600) return; // foi um deslizar
+    tap(p.v);
   });
   canvas.addEventListener('click', () => { if (mode === 'intro') start(); else if (suspensa) retomar(); });
   document.addEventListener('keydown', (e) => {

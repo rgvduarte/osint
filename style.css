@@ -948,6 +948,9 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .berlim .screen { background: #dff0f6; }
 .sofa .prize { white-space: pre-line; transform: rotate(7deg); }
 .sofa .screen { background: #efe6d2; }
+.sofa .screen.playing canvas { touch-action: pan-y; } /* o toque conta ao soltar; deslizar faz scroll */
+/* a placa com o nome assenta na moldura e não tapa o marcador do jogo */
+.sofa .arcade, .berlim .arcade { padding-top: 24px; }
 @media (max-width: 420px) { .toques .pt-intro, .sofa .pt-intro, .berlim .pt-intro { padding-right: 92px; } }
 /* ecrãs muito estreitos: o carimbo do prémio sobe para cima da pasta e o título fica com a largura toda */
 @media (max-width: 380px) {
@@ -979,6 +982,7 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
   color: var(--steel);
 }
 .over-verdict:empty { display: none; }
+@media (max-width: 340px) { .over-verdict { display: none; } } /* ecrãs muito pequenos: o "Outra vez!" tem de caber */
 .over-links { display: flex; flex-direction: column; align-items: center; }
 .over-links .text-btn { min-height: 36px; font-size: 16px; }
 

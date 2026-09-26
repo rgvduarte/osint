@@ -77,7 +77,7 @@ export const TEXTOS = {
     "Art. 1.º — A cabeça é do inspector. Ninguém o consultou, porque estava a dormir.",
     "Art. 2.º — Cada cabeçada leva dois toques: o primeiro fixa a horizontal, o segundo a vertical. Um terceiro toque é só nervos.",
     "Art. 3.º — Folga: 50 pontos, e a cabeça fica lá a dormir. É proibido acordá-la.",
-    "Art. 4.º — Mesmo ao lado: 25. Resto das costas: 10. Assento: 2. Braço, parede e chão: 0. Os azulejos não dão pontos, só prestam depoimento.",
+    "Art. 4.º — Mesmo ao lado: 25. Resto das costas: 10. Assento: 2. Braço, frente do sofá, parede e chão: 0. Os azulejos não dão pontos, só prestam depoimento.",
     "Art. 5.º — A mira fica mais tonta a cada ronda. A culpa é sempre da mira. Nunca do jogador, nem do Ricardo.",
     "Art. 6.º — Proibido reconstituir isto em sofás reais, próprios ou alheios. Entre rondas, bebe água: foi o que faltou ao arguido.",
     "Art. 7.º — O sofá de queijo entrega-se quando o inspector acordar. Ou seja, podes esperar sentado."
