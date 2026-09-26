@@ -7,13 +7,13 @@ Uma web app estática para o GitHub Pages: tiras uma selfie e o Inspector Xinxer
 ```
  GitHub Actions (uma vez por galeria)                  Browser do convidado
  ─────────────────────────────────────                 ─────────────────────────────
- galeria ──► indexer/build-index.mjs ──► data/faces.json ──► app.js compara a selfie
-   (login com password,   (deteta todas as caras,           com cada cara do índice
-    scroll até ao fim)     128 números por cara)            e mostra as fotos
+ galeria ──► indexer/build-index.mjs ──► data/index-arc.json ──► app.js compara a selfie
+   (login com password,   (deteta todas as caras,               com cada cara do índice
+    scroll até ao fim)     512 números por cara)                e mostra as fotos
 ```
 
 - **O índice é calculado offline.** A app nunca percorre a galeria em direto: seria lento, e o browser bloqueia a leitura de imagens de outro domínio.
-- **A selfie não sai do telemóvel.** O modelo ([face-api](https://github.com/vladmandic/face-api)) corre no browser. O único ficheiro descarregado é `data/faces.json`.
+- **A selfie não sai do telemóvel.** O modelo ([face-api](https://github.com/vladmandic/face-api)) corre no browser. Só são descarregados o índice (`data/index-arc.json`) e os modelos.
 - As fotos são mostradas a partir dos URLs originais da galeria ou, se a galeria as proteger com login, a partir de miniaturas guardadas em `data/thumbs/` (ver abaixo).
 
 ## Configuração (uma vez)
@@ -74,8 +74,35 @@ Enquanto não são descobertos, chamam a atenção à vez: o chapéu abana (com 
 - Se for o **noivo** a tirar a selfie: cadastro com a foto dele mascarado. O noivo é reconhecido por 40 caras de referência tiradas da galeria (`data/noivo.json`, gerado com `GROOM=2 node indexer/people.mjs`; o workflow **Analisar pessoas** confirma quem é quem pelo género/idade e por quem aparece junto com quem).
 - A mensagem da missão autodestrói-se. Sem provas: o inspector mostra como passou a festa. Mais de 250 fotos: "Celebridade!". Selfie do próprio inspector: não se pode investigar a si próprio.
 
+## Passatempo: "Voa, Ricardo, Voa!"
+
+Por baixo da Xinxers-câmara há um minijogo tipo Flappy Bird (`jogo.js`): a cara do noivo, de chapéu de hélice, a fugir de garrafas-paródia (Jaque Daniels, Dom Pérignão, Zé Corvo…). Os power-ups são do casamento: aliança (5 s invencível), copo-d'água (câmara lenta), fatia de bolo (+5), ramo da noiva (pontos a dobrar) e flash do inspector (limpa as garrafas). O inspector apresenta o passatempo: quem ficar no topo do leaderboard ganha uma garrafa de queijo. Os textos estão em `jogo-textos.js`; o regulamento aparece também no menu Dossiês.
+
+**Leaderboard partilhado.** Enquanto `FIREBASE_DB` (no topo de `jogo.js`) estiver vazio, cada telemóvel só vê os seus resultados. Para um leaderboard de todos os convidados:
+
+1. Em [console.firebase.google.com](https://console.firebase.google.com): *Criar projeto* (o Analytics pode ficar desligado) → *Build → Realtime Database → Criar base de dados* (localização: Bélgica, `europe-west1`) → *Começar no modo bloqueado*.
+2. No separador *Regras*, cola isto e publica:
+   ```json
+   {
+     "rules": {
+       "scores": {
+         ".read": true,
+         ".indexOn": ["score"],
+         "$id": {
+           ".write": "!data.exists()",
+           ".validate": "newData.hasChildren(['name', 'score', 't']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 5000 && newData.child('t').val() == now"
+         }
+       }
+     }
+   }
+   ```
+   Qualquer pessoa pode ler e acrescentar resultados; ninguém pode alterar nem apagar os que já lá estão.
+3. Copia o URL da base de dados (algo como `https://xinxers-default-rtdb.europe-west1.firebasedatabase.app`) para `FIREBASE_DB` em `jogo.js`.
+
+O leaderboard é à base da confiança: quem souber usar o `curl` consegue inventar um resultado. Antes de entregar o queijo, confirma o vencedor na consola do Firebase (*Realtime Database → Dados → scores*), onde podes também apagar batotas.
+
 ## Privacidade: lê isto antes de publicar
 
-- `data/faces.json` contém **descritores biométricos** de todas as pessoas da galeria e fica público no GitHub Pages. No RGPD, isto são dados de categoria especial (art. 9.º). Para um evento privado, convém pelo menos avisar os convidados, ou pôr o repositório/Pages com acesso restrito.
+- `data/index-arc.json` contém **descritores biométricos** de todas as pessoas da galeria e fica público no GitHub Pages. No RGPD, isto são dados de categoria especial (art. 9.º). Para um evento privado, convém pelo menos avisar os convidados, ou pôr o repositório/Pages com acesso restrito.
 - Com **thumbs** ligado, as miniaturas ficam públicas, contornando a password da galeria.
 - As passwords ficam só nos secrets do GitHub; nunca no código.
