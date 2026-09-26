@@ -369,6 +369,40 @@ async function main() {
   const photos = [], faces = [];
   let failed = 0;
   const t0 = Date.now();
+  // Grava o que já está feito (+ o que vem da cache para as fotos seguintes), para que um run
+  // interrompido não perca trabalho: o próximo retoma a partir daqui.
+  let processed = 0;
+  const save = async (upto) => {
+    const P = photos.slice(), F = faces.slice();
+    for (const it of items.slice(upto)) {
+      const hit = cached(it);
+      if (!hit) continue;
+      const p = P.length;
+      P.push({ ...hit.photo, s: it.src });
+      for (const f of hit.faces) F.push({ ...f, p });
+    }
+    const out = {
+      app: 'Inspector Xinxers',
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      source: label,
+      model: 'face-api ssdMobilenetv1 + faceRecognitionNet (128d)',
+      photos: P,
+      faces: F,
+    };
+    await fs.mkdir(path.dirname(OUT), { recursive: true });
+    await fs.writeFile(OUT + '.tmp', JSON.stringify(out));
+    await fs.rename(OUT + '.tmp', OUT);
+  };
+  let current = 0;
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.once(sig, async () => {
+      console.warn(`\n${sig}: a gravar ${photos.length} fotos antes de sair…`);
+      await save(current).catch(() => {});
+      process.exit(130);
+    });
+  }
+
   // Descarrega à frente (em paralelo) enquanto a deteção corre sobre a foto atual.
   const cached = (it) => { const hit = cache.get(it.full); return hit && (!THUMBS || hit.photo.t) ? hit : null; };
   const download = async (it) => {
@@ -388,6 +422,7 @@ async function main() {
   };
 
   for (const [i, it] of items.entries()) {
+    current = i;
     const p = photos.length;
     const hit = cached(it);
     if (hit) {
@@ -411,6 +446,10 @@ async function main() {
         faces.push({ p, b: [r3(f.box.x / w), r3(f.box.y / h), r3(f.box.width / w), r3(f.box.height / h)], d: b64(f.descriptor) });
       }
       console.log(`[${i + 1}/${items.length}] ${found.length} cara(s)  ${it.full.slice(-60)}`);
+      if (++processed % 100 === 0) {
+        await save(i + 1);
+        console.log(`  ↳ progresso gravado (${photos.length} fotos, ${((Date.now() - t0) / 1000 / processed).toFixed(1)}s/foto)`);
+      }
     } catch (e) {
       failed++;
       console.warn(`[${i + 1}/${items.length}] falhou: ${e.message}  ${it.full.slice(-60)}`);
@@ -418,17 +457,7 @@ async function main() {
   }
   await source.close();
 
-  const out = {
-    app: 'Inspector Xinxers',
-    version: 1,
-    generatedAt: new Date().toISOString(),
-    source: label,
-    model: 'face-api ssdMobilenetv1 + faceRecognitionNet (128d)',
-    photos,
-    faces,
-  };
-  await fs.mkdir(path.dirname(OUT), { recursive: true });
-  await fs.writeFile(OUT, JSON.stringify(out));
+  await save(items.length);
   const secs = ((Date.now() - t0) / 1000).toFixed(0);
   console.log(`\n✓ ${photos.length} fotos, ${faces.length} caras, ${failed} falhas, ${secs}s → ${path.relative(process.cwd(), OUT)}`);
   if (failed && failed === items.length) process.exit(1);
