@@ -73,15 +73,14 @@ export async function dossiesDosJogos() {
     ['./jogo-textos.js', './toques-textos.js', './sofa-textos.js', './berlim-textos.js'].map((f) => carregar(f).catch(() => null)),
   );
   const jogar = (id, emoji, T) => (T ? [{ id, emoji, label: `Jogar: ${T.nome_jogo}`, action: 'jogo', target: id }] : []);
-  const regras = (id, emoji, label, tab, T) => (T ? [{ id, emoji, label, tab, title: label, html: T.regulamento.map((r) => `<p>${esc(r)}</p>`).join('') }] : []);
+  const regras = (id, emoji, label, tab, T, menu = true) => (T ? [{ id, emoji, label, tab, title: label, menu, html: T.regulamento.map((r) => `<p>${esc(r)}</p>`).join('') }] : []);
   return [
     ...jogar('jogo', '🍾', TEXTOS),
     ...jogar('toques', '⚽', TOQUES),
-    ...jogar('sofa', '🛋️', SOFA),
     ...jogar('berlim', '🍩', BERLIM),
     ...regras('regulamento', '🏆', 'Regulamento do passatempo', 'Passatempo', TEXTOS),
     ...regras('regulamento-toques', '🎬', 'Regulamento do casting', 'Repescagem', TOQUES),
-    ...regras('regulamento-sofa', '🥃', 'Regulamento do sofá', 'Auto de ocorrência', SOFA),
+    ...regras('regulamento-sofa', '🥃', 'Regulamento do sofá', 'Arquivo secreto', SOFA, false), // easter egg: fora do menu
     ...regras('regulamento-berlim', '🏖️', 'Regulamento da praia', 'Capitania de Sesimbra', BERLIM),
   ];
 }

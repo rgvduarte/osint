@@ -747,6 +747,21 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 }
 .w-name { margin: 12px 0 0; font: 400 30px/1 var(--cartoon); text-transform: uppercase; }
 .w-text { margin: 8px 0 16px; font-size: 16px; line-height: 1.35; }
+.w-pista {
+  display: block;
+  width: 100%;
+  margin: -6px 0 14px;
+  padding: 8px 10px;
+  border: 2px dashed var(--red);
+  border-radius: 8px;
+  background: rgba(216, 50, 42, .08);
+  color: var(--red);
+  font: 700 14px/1.3 var(--cond);
+  text-align: left;
+  cursor: pointer;
+}
+.w-pista[hidden] { display: none; }
+.w-pista:hover, .w-pista:focus-visible { background: rgba(216, 50, 42, .16); }
 
 /* cadastro do noivo */
 .wanted.groom { background: #fbe7e4; }
@@ -948,6 +963,9 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .berlim .screen { background: #dff0f6; }
 .sofa .prize { white-space: pre-line; transform: rotate(7deg); }
 .sofa .screen { background: #efe6d2; }
+.sofa .screen.playing canvas { touch-action: pan-y; } /* o toque conta ao soltar; deslizar faz scroll */
+/* a placa com o nome assenta na moldura e não tapa o marcador do jogo */
+.sofa .arcade, .berlim .arcade { padding-top: 24px; }
 @media (max-width: 420px) { .toques .pt-intro, .sofa .pt-intro, .berlim .pt-intro { padding-right: 92px; } }
 /* ecrãs muito estreitos: o carimbo do prémio sobe para cima da pasta e o título fica com a largura toda */
 @media (max-width: 380px) {
@@ -979,6 +997,7 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
   color: var(--steel);
 }
 .over-verdict:empty { display: none; }
+@media (max-width: 340px) { .over-verdict { display: none; } } /* ecrãs muito pequenos: o "Outra vez!" tem de caber */
 .over-links { display: flex; flex-direction: column; align-items: center; }
 .over-links .text-btn { min-height: 36px; font-size: 16px; }
 
