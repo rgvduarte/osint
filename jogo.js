@@ -1,17 +1,13 @@
 // O voo do noivo: minijogo tipo Flappy Bird com a cara do Ricardo (foto antiga, mascarado)
 // a desviar-se de garrafas-paródia, com power-ups de casamento e um leaderboard.
 import { TEXTOS } from './jogo-textos.js';
-
-// ---- Leaderboard partilhado (Firebase Realtime Database, API REST, sem SDK).
-// Preencher com o URL da base de dados (ex.: https://xinxers-default-rtdb.europe-west1.firebasedatabase.app)
-// e usar as regras de README.md. Vazio = leaderboard guardado só neste telemóvel.
-export const FIREBASE_DB = '';
+import { criarPlacar, ligarSubmissao, load, save } from './placar.js';
 
 const W = 360, H = 540;              // coordenadas lógicas do canvas
 const GRAVITY = 1500, FLAP = -430;   // px/s², px/s
 const R = 21;                        // raio da cabeça
 const BOTTLE_W = 58, NECK_W = 22, NECK_H = 46;
-const LB_KEY = 'xinxers-voo-local', NAME_KEY = 'xinxers-voo-nome', BEST_KEY = 'xinxers-voo-recorde';
+const LB_KEY = 'xinxers-voo-local', BEST_KEY = 'xinxers-voo-recorde';
 
 const PALETTE = {
   whisky: { body: '#b8732a', glass: '#8a4f14', label: '#161412', ink: '#f2e3c2', shape: 'square' },
@@ -32,10 +28,6 @@ const POWER = {
   ramo: { emoji: '💐', dur: 8, efeito: 'pontos a dobrar' },
   flash: { emoji: '📸', dur: 0, efeito: 'limpa as garrafas' },
 };
-
-const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; } };
-const load = (k, d) => safe(() => JSON.parse(localStorage.getItem(k)) ?? d, d);
-const save = (k, v) => safe(() => localStorage.setItem(k, JSON.stringify(v)));
 
 export function initJogo(root) {
   const canvas = root.querySelector('canvas');
@@ -78,7 +70,8 @@ export function initJogo(root) {
   const setMode = (m) => { mode = m; canvas.parentElement.classList.toggle('playing', m === 'playing'); };
   let raf = 0, last = 0;
   let best = load(BEST_KEY, 0);
-  ui.name.value = load(NAME_KEY, '');
+  const placar = criarPlacar({ path: 'voo', localKey: LB_KEY, board: ui.board, note: ui.boardNote });
+  const resetPainel = ligarSubmissao(ui, placar, () => (mode === 'over' ? g : null));
 
   function newGame() {
     g = {
@@ -199,8 +192,7 @@ export function initJogo(root) {
       : fugiu ? 'Deixaste o noivo a voar sozinho. Ele caiu, claro.'
       : g.y > H / 2 ? 'O noivo aterrou na pista de dança. De cara.' : 'O noivo foi ao teto. Literalmente.';
     if (newBest && g.score > 0) ui.overText.textContent += ' ' + TEXTOS.recorde_frases[Math.floor(Math.random() * TEXTOS.recorde_frases.length)];
-    ui.submit.disabled = g.score <= 0;
-    ui.submit.textContent = 'Entrar no leaderboard';
+    resetPainel(g.score > 0);
     ui.over.hidden = false;
   }
 
@@ -371,81 +363,12 @@ export function initJogo(root) {
     if (!(e.code === 'Space' || e.code === 'ArrowUp')) return;
     if (e.target.closest('input, textarea, button, dialog')) return;
     const r = canvas.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > innerHeight) return;
+    if (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) < r.height * 0.6) return; // o jogo tem de estar à vista
     e.preventDefault();
     flap();
   });
   ui.again.addEventListener('click', () => { newGame(); setMode('playing'); ui.over.hidden = true; });
-  ui.submit.addEventListener('click', async () => {
-    const name = ui.name.value.trim().slice(0, 20);
-    if (!name) { ui.name.focus(); ui.name.placeholder = 'Primeiro, o teu nome'; return; }
-    save(NAME_KEY, name);
-    if (g.submitted) return;
-    g.submitted = true;
-    ui.submit.disabled = true;
-    ui.submit.textContent = 'A registar no cartório…';
-    try {
-      await submitScore(name, g.score);
-      ui.submit.textContent = 'Registado!';
-    } catch {
-      g.submitted = false;
-      ui.submit.disabled = false;
-      ui.submit.textContent = 'O cartório falhou. Tenta outra vez';
-    }
-    renderBoard();
-  });
 
-  async function submitScore(name, score) {
-    if (FIREBASE_DB) {
-      const res = await fetch(`${FIREBASE_DB}/scores.json`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, score, t: { '.sv': 'timestamp' } }),
-      });
-      if (!res.ok) throw new Error(`leaderboard: ${res.status}`);
-      return;
-    }
-    const list = load(LB_KEY, []);
-    list.push({ name, score, t: Date.now() });
-    list.sort((a, b) => b.score - a.score);
-    save(LB_KEY, list.slice(0, 60));
-  }
-
-  async function renderBoard() {
-    let rows = [];
-    if (FIREBASE_DB) {
-      try {
-        const res = await fetch(`${FIREBASE_DB}/scores.json?orderBy="score"&limitToLast=60`);
-        rows = Object.values((await res.json()) || {});
-        ui.boardNote.textContent = 'Leaderboard de todos os convidados.';
-      } catch {
-        ui.boardNote.textContent = 'O cartório está fechado (sem rede). Tenta mais tarde.';
-      }
-    } else {
-      rows = load(LB_KEY, []);
-      ui.boardNote.textContent = 'Por agora, o leaderboard está guardado só neste telemóvel.';
-    }
-    // um lugar por pessoa (o melhor resultado); em empate, fica à frente quem lá chegou primeiro
-    const bestOf = new Map();
-    rows = rows.filter((r) => r && typeof r.name === 'string' && Number.isFinite(r.score));
-    for (const r of rows.sort((a, b) => b.score - a.score || a.t - b.t)) {
-      const k = String(r.name).trim().toLowerCase();
-      if (!bestOf.has(k)) bestOf.set(k, r);
-    }
-    rows = [...bestOf.values()].slice(0, 10);
-    const me = load(NAME_KEY, '');
-    ui.board.replaceChildren(...(rows.length ? rows : [{ name: 'Ainda ninguém. Sê o primeiro!', score: '' }]).map((r, i) => {
-      const li = document.createElement('li');
-      if (me && r.name.trim().toLowerCase() === me.trim().toLowerCase()) li.className = 'me';
-      const medal = ['🥇', '🥈', '🥉'][i] || `${i + 1}.`;
-      li.innerHTML = '<span class="pos"></span><span class="who"></span><span class="pts"></span>';
-      li.children[0].textContent = r.score === '' ? '' : medal;
-      li.children[1].textContent = r.name;
-      li.children[2].textContent = r.score;
-      return li;
-    }));
-  }
-
-  renderBoard();
+  placar.render();
   draw();
 }
