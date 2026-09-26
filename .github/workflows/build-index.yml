@@ -1,0 +1,99 @@
+name: Indexar galeria
+
+# Percorre a galeria, calcula os descritores faciais e faz commit de data/faces.json.
+# Credenciais: secrets GALLERY_URL e GALLERY_PASSWORD (Settings → Secrets and variables → Actions),
+# ou os inputs gallery_url / gallery_password deste workflow (são mascarados nos logs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      gallery_url:
+        description: 'Link da galeria (vazio = usa o secret GALLERY_URL)'
+        required: false
+        default: ''
+      gallery_password:
+        description: 'Senha da galeria (vazio = usa o secret GALLERY_PASSWORD)'
+        required: false
+        default: ''
+      thumbs:
+        description: 'Guardar miniaturas no repositório (necessário se as fotos só abrem com login; ficam públicas)'
+        type: boolean
+        default: false
+      limit:
+        description: 'Processar só as primeiras N fotos (vazio = todas)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-index
+  cancel-in-progress: false
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: indexer/package-lock.json
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      # Lê os inputs do ficheiro do evento (e não com ${{ }}) para que nunca apareçam em claro no log.
+      - name: Credenciais
+        env:
+          SECRET_URL: ${{ secrets.GALLERY_URL }}
+          SECRET_PASSWORD: ${{ secrets.GALLERY_PASSWORD }}
+        run: |
+          url=$(jq -r '.inputs.gallery_url // empty' "$GITHUB_EVENT_PATH")
+          pw=$(jq -r '.inputs.gallery_password // empty' "$GITHUB_EVENT_PATH")
+          url=${url:-$SECRET_URL}
+          pw=${pw:-$SECRET_PASSWORD}
+          if [ -z "$url" ]; then echo "::error::Falta o link da galeria (input gallery_url ou secret GALLERY_URL)."; exit 1; fi
+          echo "::add-mask::$url"
+          query=${url#*\?}
+          if [ "$query" != "$url" ] && [ -n "$query" ]; then echo "::add-mask::$query"; fi
+          if [ -n "$pw" ]; then echo "::add-mask::$pw"; fi
+          echo "GALLERY_URL=$url" >> "$GITHUB_ENV"
+          echo "GALLERY_PASSWORD=$pw" >> "$GITHUB_ENV"
+
+      - name: Indexar
+        env:
+          THUMBS: ${{ inputs.thumbs && '1' || '0' }}
+          LIMIT: ${{ inputs.limit }}
+        run: node build-index.mjs
+
+      # Capturas de ecrã e HTML da galeria: só quando falha, e por pouco tempo (o repositório é público).
+      - name: Guardar diagnóstico
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: indexer/debug/
+          retention-days: 2
+          if-no-files-found: ignore
+
+      - name: Commit do índice
+        working-directory: .
+        run: |
+          git config user.name "inspector-xinxers[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Índice sem alterações."
+          else
+            git commit -m "Atualizar índice de caras"
+            git push
+          fi
