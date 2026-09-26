@@ -2,6 +2,7 @@
 // Escrito por 4 "escritores" com ângulos diferentes, avaliado por um júri e verificado contra factos
 // inventados; só usa factos reais (números do índice, fotos dadas pelo inspector).
 import { TEXTOS } from './jogo-textos.js';
+import { TEXTOS as TOQUES } from './toques-textos.js';
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -67,7 +68,15 @@ export const DOSSIES = [
     id: 'jogo',
     emoji: '🍾',
     label: `Jogar: ${TEXTOS.nome_jogo}`,
-    action: 'jogo'
+    action: 'jogo',
+    target: 'jogo'
+  },
+  {
+    id: 'toques',
+    emoji: '⚽',
+    label: `Jogar: ${TOQUES.nome_jogo}`,
+    action: 'jogo',
+    target: 'toques'
   },
   {
     id: 'regulamento',
@@ -76,5 +85,13 @@ export const DOSSIES = [
     tab: 'Passatempo',
     title: 'Regulamento do passatempo',
     html: TEXTOS.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
+  },
+  {
+    id: 'regulamento-toques',
+    emoji: '🎬',
+    label: 'Regulamento do casting',
+    tab: 'Repescagem',
+    title: 'Regulamento do casting',
+    html: TOQUES.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
   }
 ];

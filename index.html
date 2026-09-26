@@ -153,6 +153,47 @@
         <button class="text-btn" id="regrasBtn">Regulamento do passatempo</button>
       </div>
     </section>
+
+    <section class="jogo toques" id="toques" aria-labelledby="toquesTitulo">
+      <span class="tab">Repescagem</span>
+      <span class="prize" aria-hidden="true" data-t="premio"></span>
+      <div class="pt-intro">
+        <img class="pt-face" src="assets/inspector-peek.jpg" alt="O Inspector Xinxers">
+        <h2 class="pt-title" id="toquesTitulo" data-t="titulo"></h2>
+      </div>
+      <p class="pt-text" data-t="intro"></p>
+
+      <div class="arcade">
+        <span class="plate" data-t="nome_jogo"></span>
+        <div class="screen">
+          <canvas width="360" height="540" aria-label="Jogo: toca na bola para dar toques e não a deixes cair"></canvas>
+          <div class="over" data-over hidden>
+            <span class="over-stamp" data-t="carimbo"></span>
+            <p class="over-title" data-over-title></p>
+            <p class="over-text" data-over-text></p>
+            <p class="over-verdict" data-over-verdict></p>
+            <label class="over-name">O teu nome
+              <input data-name maxlength="20" autocomplete="nickname" enterkeyhint="send" placeholder="Nome e apelido">
+            </label>
+            <button class="btn" data-submit>Entrar no leaderboard</button>
+            <div class="over-links">
+              <button class="text-btn light" data-again>Outra vez!</button>
+              <a class="text-btn light" data-video target="_blank" rel="noopener"></a>
+            </div>
+          </div>
+        </div>
+        <p class="fine arcade-help">Toca na bola para lhe dar um toque. Toca-lhe do lado esquerdo e ela vai para a direita, e vice-versa. Não a deixes cair.</p>
+      </div>
+
+      <ul class="powers" data-powers aria-label="O que aparece no campo"></ul>
+
+      <div class="board">
+        <h3>Leaderboard</h3>
+        <ol data-board></ol>
+        <p class="fine" data-board-note></p>
+        <button class="text-btn" id="regrasToquesBtn">Regulamento do casting</button>
+      </div>
+    </section>
   </main>
 
   <dialog id="lightbox">
