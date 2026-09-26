@@ -970,9 +970,11 @@ els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) e
 
 $('regrasBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento')));
 $('regrasToquesBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento-toques')));
+$('regrasSofaBtn').addEventListener('click', () => openDossie(DOSSIES.find((d) => d.id === 'regulamento-sofa')));
 // Os jogos vivem à parte: se falharem, a pesquisa de fotos continua a funcionar.
 import('./jogo.js').then((m) => m.initJogo($('jogo'))).catch((e) => console.warn('jogo:', e));
 import('./toques.js').then((m) => m.initToques($('toques'))).catch((e) => console.warn('toques:', e));
+import('./sofa.js').then((m) => m.initSofa($('sofa'))).catch((e) => console.warn('sofa:', e));
 
 loadIndex();
 els.hatHint.hidden = found.has('hat');

@@ -3,6 +3,7 @@
 // inventados; só usa factos reais (números do índice, fotos dadas pelo inspector).
 import { TEXTOS } from './jogo-textos.js';
 import { TEXTOS as TOQUES } from './toques-textos.js';
+import { TEXTOS as SOFA } from './sofa-textos.js';
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -79,6 +80,13 @@ export const DOSSIES = [
     target: 'toques'
   },
   {
+    id: 'sofa',
+    emoji: '🛋️',
+    label: `Jogar: ${SOFA.nome_jogo}`,
+    action: 'jogo',
+    target: 'sofa'
+  },
+  {
     id: 'regulamento',
     emoji: '🏆',
     label: 'Regulamento do passatempo',
@@ -93,5 +101,13 @@ export const DOSSIES = [
     tab: 'Repescagem',
     title: 'Regulamento do casting',
     html: TOQUES.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
+  },
+  {
+    id: 'regulamento-sofa',
+    emoji: '🥃',
+    label: 'Regulamento do sofá',
+    tab: 'Auto de ocorrência',
+    title: 'Regulamento do sofá',
+    html: SOFA.regulamento.map((r) => `<p>${esc(r)}</p>`).join('')
   }
 ];
