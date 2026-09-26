@@ -419,11 +419,12 @@ export function initSofa(root) {
   // e não gasta cabeçadas. A mira fica no sítio onde estava quando o dedo tocou.
   let toque = null;
   canvas.addEventListener('pointerdown', (e) => {
-    if (!jogando() || suspensa || !e.isPrimary) return; // (dois dedos não valem dois toques)
-    toque = { x: e.clientX, y: e.clientY, t: e.timeStamp, modo: mode, v: mode === 'mira-x' ? mira('x') : mode === 'mira-y' ? mira('y') : null };
+    if (!jogando() || suspensa || toque) return; // um dedo de cada vez (outro dedo pousado não bloqueia)
+    toque = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, modo: mode, v: mode === 'mira-x' ? mira('x') : mode === 'mira-y' ? mira('y') : null };
   });
-  canvas.addEventListener('pointercancel', () => { toque = null; });
+  canvas.addEventListener('pointercancel', (e) => { if (toque && e.pointerId === toque.id) toque = null; });
   canvas.addEventListener('pointerup', (e) => {
+    if (!toque || e.pointerId !== toque.id) return;
     const p = toque; toque = null;
     if (!p || p.modo !== mode || suspensa) return;
     if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 12 || e.timeStamp - p.t > 600) return; // foi um deslizar
