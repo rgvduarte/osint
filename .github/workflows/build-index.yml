@@ -1,0 +1,73 @@
+name: Indexar galeria
+
+# Percorre a galeria, calcula os descritores faciais e faz commit de data/faces.json.
+# Configura primeiro os secrets GALLERY_URL e GALLERY_PASSWORD (Settings → Secrets and variables → Actions).
+
+on:
+  workflow_dispatch:
+    inputs:
+      thumbs:
+        description: 'Guardar miniaturas no repositório (necessário se as fotos só abrem com login; ficam públicas)'
+        type: boolean
+        default: false
+      limit:
+        description: 'Processar só as primeiras N fotos (vazio = todas)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-index
+  cancel-in-progress: false
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: indexer/package-lock.json
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Indexar
+        env:
+          GALLERY_URL: ${{ secrets.GALLERY_URL }}
+          GALLERY_PASSWORD: ${{ secrets.GALLERY_PASSWORD }}
+          THUMBS: ${{ inputs.thumbs && '1' || '0' }}
+          LIMIT: ${{ inputs.limit }}
+        run: node build-index.mjs
+
+      - name: Guardar diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: indexer/debug/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Commit do índice
+        working-directory: .
+        run: |
+          git config user.name "inspector-xinxers[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Índice sem alterações."
+          else
+            git commit -m "Atualizar índice de caras"
+            git push
+          fi

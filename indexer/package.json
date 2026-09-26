@@ -1,0 +1,14 @@
+{
+  "name": "inspector-xinxers-indexer",
+  "private": true,
+  "type": "module",
+  "description": "Gera data/faces.json a partir da galeria (descritores faciais calculados offline).",
+  "scripts": {
+    "index": "node build-index.mjs"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "4.22.0",
+    "@vladmandic/face-api": "1.7.15",
+    "playwright": "1.63.0"
+  }
+}
