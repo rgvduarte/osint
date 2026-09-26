@@ -15,7 +15,13 @@
 </head>
 <body>
   <header class="hero">
-    <a class="by" href="https://buildity.ai" target="_blank" rel="noopener">by <b>Buildity.ai</b></a>
+    <div class="topbar">
+      <div class="menu">
+        <button class="menu-btn" id="menuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="menuList">Dossiês <span aria-hidden="true">▾</span></button>
+        <ul class="menu-list" id="menuList" role="menu" hidden></ul>
+      </div>
+      <a class="by" href="https://www.buildity.pt" target="_blank" rel="noopener">by <b>Buildity.ai</b></a>
+    </div>
 
     <span class="hint" id="hatHint" aria-hidden="true">
       <svg viewBox="0 0 50 30"><path d="M46 8C34 4 18 8 6 22M6 22l1-10M6 22l10-2"/></svg>
@@ -137,11 +143,18 @@
     <button class="btn" id="wantedClose">Vai, vai, fechar!</button>
   </dialog>
 
+  <dialog id="page" class="page">
+    <span class="page-tab" id="pageTab">Dossiê</span>
+    <h2 class="page-title" id="pageTitle" tabindex="-1"></h2>
+    <div class="page-body" id="pageBody"></div>
+    <button class="btn" id="pageClose">Arquivar</button>
+  </dialog>
+
   <p class="toast" id="toast" role="status" hidden></p>
 
   <footer>
     <p>Nenhum convidado foi interrogado durante esta investigação.</p>
-    <a class="made" href="https://buildity.ai" target="_blank" rel="noopener">by Buildity.ai</a>
+    <a class="made" href="https://www.buildity.pt" target="_blank" rel="noopener">by Buildity.ai</a>
   </footer>
 
   <script type="module" src="app.js"></script>

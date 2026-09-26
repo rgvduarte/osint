@@ -43,6 +43,97 @@ a { color: inherit; }
   padding: 16px 16px 8px;
   text-align: center;
 }
+/* menu de dossiês */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; z-index: 20;
+}
+.menu { position: relative; }
+.menu-btn {
+  padding: 7px 12px 4px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: var(--folder);
+  box-shadow: 3px 3px 0 var(--ink);
+  font: 400 15px/1 var(--cartoon);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.menu-list {
+  position: absolute;
+  left: 0; top: calc(100% + 10px);
+  min-width: 250px;
+  margin: 0; padding: 6px;
+  list-style: none;
+  background: var(--folder);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: 5px 5px 0 var(--ink);
+  text-align: left;
+  animation: drop .18s ease-out;
+}
+.menu-list[hidden] { display: none; }
+@keyframes drop { from { transform: translateY(-6px) scale(.97); opacity: 0; } }
+.menu-list button {
+  display: flex; gap: 10px; align-items: center;
+  width: 100%;
+  padding: 10px 10px;
+  border: 0; border-radius: 6px;
+  background: none;
+  font: 600 16px var(--cond);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.menu-list button:hover, .menu-list button:focus-visible { background: rgba(42, 31, 23, .1); }
+.menu-list li + li { border-top: 1px dashed rgba(42, 31, 23, .3); }
+
+/* página de dossiê */
+.page {
+  width: min(94vw, 560px);
+  max-height: 88vh;
+  padding: 22px 20px 20px;
+  background: var(--folder);
+  color: var(--ink);
+  border: 4px solid var(--ink);
+  border-radius: 6px 14px 14px 14px;
+  box-shadow: 8px 8px 0 var(--ink);
+  overflow: auto;
+}
+.page[open] { animation: slam .45s cubic-bezier(.34, 1.56, .64, 1); }
+.page-tab {
+  display: inline-block;
+  padding: 3px 10px 1px;
+  border: 3px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  font: 400 13px/18px var(--cartoon);
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+}
+
+.page-title:focus { outline: none; }
+.page-title {
+  margin: 12px 0 10px;
+  font-size: clamp(28px, 8vw, 38px);
+  line-height: 1.02;
+}
+.page-body { font-size: 17px; line-height: 1.5; }
+.page-body p { margin: 0 0 12px; }
+.page-body ul { margin: 0 0 12px; padding-left: 20px; }
+.page .btn { margin-top: 8px; }
+
+/* modo ressaca */
+body.ressaca main, body.ressaca .hero { animation: ressaca 2.4s ease-in-out infinite; filter: blur(1.2px) saturate(1.4); }
+@keyframes ressaca {
+  25% { transform: rotate(-1.2deg) translateX(-6px); }
+  75% { transform: rotate(1.2deg) translateX(6px); }
+}
+
 .by {
   display: block;
   text-align: right;
@@ -657,7 +748,7 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .toast[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hint, .tease, .fuse, .ko, .hat .prop { animation: none !important; }
+  .hint, .tease, .fuse, .ko, .hat .prop, body.ressaca main, body.ressaca .hero, .menu-list { animation: none !important; }
 }
 
 /* ------------------------------------------------------------ rodapé */
