@@ -9,6 +9,7 @@ const RONDAS = 3, CABECAS = 3;
 const GAP_X = 180;                   // a folga entre as almofadas das costas
 const BACK = { x0: 42, x1: 318, y0: 118, y1: 318 };  // almofadas das costas
 const SEAT = { x0: 42, x1: 318, y0: 318, y1: 385 };  // almofadas do assento
+const ARM_Y = 244, ARM_X0 = 50, ARM_X1 = W - 50;     // braços do sofá (de ARM_Y para baixo)
 const HEAD_R = 25, FLIGHT = 0.5;     // raio da cabeça espetada, duração do voo (s)
 const ZONAS = {
   encaixe: { pts: 50, emoji: '🎯', txt: 'na folga' },
@@ -25,12 +26,14 @@ const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export function zonaDe(x, y) {
   const d = Math.abs(x - GAP_X);
+  // as almofadas do assento são desenhadas por cima dos braços; os braços, por cima das almofadas das costas
+  if (x >= SEAT.x0 && x <= SEAT.x1 && y >= SEAT.y0 && y < SEAT.y1) return 'assento';
+  if (y >= ARM_Y && (x <= ARM_X0 || x >= ARM_X1)) return 'fora';
   if (x >= BACK.x0 && x <= BACK.x1 && y >= BACK.y0 && y < BACK.y1) {
     if (d <= 10 && y >= BACK.y0 + 12 && y <= BACK.y1 - 8) return 'encaixe';
     if (d <= 24) return 'quase';
     return 'almofada';
   }
-  if (x >= SEAT.x0 && x <= SEAT.x1 && y >= SEAT.y0 && y < SEAT.y1) return 'assento';
   return 'fora';
 }
 
@@ -245,8 +248,8 @@ export function initSofa(root) {
     }
     // braços e base de pele escura
     ctx.fillStyle = '#3a2721';
-    rr(8, 244, 42, 222, 16); ctx.fill(); ctx.stroke();
-    rr(W - 50, 244, 42, 222, 16); ctx.fill(); ctx.stroke();
+    rr(8, ARM_Y, ARM_X0 - 8, 222, 16); ctx.fill(); ctx.stroke();
+    rr(ARM_X1, ARM_Y, W - 8 - ARM_X1, 222, 16); ctx.fill(); ctx.stroke();
     ctx.fillRect(40, SEAT.y1 - 4, W - 80, 80); ctx.strokeRect(40, SEAT.y1 - 4, W - 80, 80);
     // almofadas do assento
     for (const [x0, x1] of [[SEAT.x0, GAP_X], [GAP_X, SEAT.x1]]) {
