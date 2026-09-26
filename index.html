@@ -36,7 +36,7 @@
   <main>
     <section class="mission" id="mission">
       <span class="tab">Missão ultra-secreta</span>
-      <span class="stamp" aria-hidden="true">Confidencial</span>
+      <button class="stamp" id="stamp" aria-label="Confidencial">Confidencial</button>
       <p class="briefing">
         A tua missão, se a aceitares: tira uma selfie. O inspector vasculha as
         <b id="photoCount">centenas de</b> fotos do casamento da Inês e do Ricardo e diz-te onde apareces.
@@ -86,15 +86,11 @@
           <b id="resultsTitle">0</b>
         </span>
       </div>
-      <label class="loupe">
-        <span class="loupe-name">Xinxers-lupa</span>
-        <span class="loupe-range">
-          <span>mais fotos</span>
-          <input type="range" id="threshold" min="3.5" max="5.5" step="0.1" value="4.5" aria-label="Rigor da lupa">
-          <span>mais certeza</span>
-        </span>
-      </label>
       <p class="msg" id="resultsMsg"></p>
+      <div class="nothing" id="nothing" hidden>
+        <img src="assets/inspector-ko-peek.jpg" alt="O inspector, de óculos escuros, deitado numa cadeira do pátio">
+        <p>Sem provas. Ou não vieste ao casamento… ou passaste a festa como o inspector.</p>
+      </div>
       <div class="film">
         <div class="grid" id="grid"></div>
       </div>
@@ -118,12 +114,14 @@
   </dialog>
 
   <dialog id="wanted" class="wanted">
-    <p class="w-title">Procurado</p>
-    <img src="assets/inspector.jpg" alt="O Inspector Xinxers, de chapéu, gabardina e lupa">
-    <p class="w-name">Inspector Xinxers</p>
+    <p class="w-title" id="wantedTitle">Procurado</p>
+    <img id="wantedImg" src="assets/inspector.jpg" alt="">
+    <p class="w-name" id="wantedName">Inspector Xinxers</p>
     <p class="w-text" id="wantedText"></p>
     <button class="btn" id="wantedClose">Vai, vai, fechar!</button>
   </dialog>
+
+  <p class="toast" id="toast" role="status" hidden></p>
 
   <footer>
     <p>Nenhum convidado foi interrogado durante esta investigação.</p>
