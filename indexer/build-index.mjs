@@ -78,7 +78,8 @@ async function collectFromGallery(url, password) {
     for (const frame of page.frames()) {
       const items = await frame.evaluate(scrapeDom).catch(() => []);
       for (const item of items) {
-        const key = item.full || item.src;
+        // A mesma foto aparece com vários tamanhos (?width=…): conta uma vez só.
+        const key = photoKey(item.full || item.src);
         if (!found.has(key)) found.set(key, item);
       }
     }
@@ -105,7 +106,7 @@ async function collectFromGallery(url, password) {
 
   await page.screenshot({ path: path.join(DEBUG_DIR, '2-fim-scroll.png') });
   await fs.writeFile(path.join(DEBUG_DIR, 'pagina.html'), await page.content());
-  let items = [...found.values()].filter(looksLikePhoto);
+  let items = [...found.values()].filter(looksLikePhoto).map((it) => ({ ...it, full: upsize(it.full) }));
   await fs.writeFile(path.join(DEBUG_DIR, 'imagens.json'), JSON.stringify(items, null, 2));
 
   console.log(`✓ ${items.length} fotos no DOM (${found.size} imagens no total), ${netImages.size} imagens na rede`);
@@ -207,6 +208,21 @@ function scrapeDom() {
     if (src && !src.startsWith('data:')) out.push({ src, full: src, w: el.clientWidth, h: el.clientHeight, alt: '' });
   }
   return out;
+}
+
+const photoKey = (u) => { try { const x = new URL(u); return x.origin + x.pathname; } catch { return u; } };
+
+// CDNs de galerias (SmartAlbums/SmartSlides, imgix, …) redimensionam pelo URL.
+// A grelha só carrega ~400px, pequeno demais para caras: pede-se uma versão grande.
+function upsize(u, side = 2000) {
+  try {
+    const x = new URL(u);
+    let changed = false;
+    for (const k of ['width', 'height', 'w', 'h']) {
+      if (x.searchParams.has(k)) { x.searchParams.set(k, String(side)); changed = true; }
+    }
+    return changed ? x.href : u;
+  } catch { return u; }
 }
 
 function looksLikePhoto(it) {
@@ -353,18 +369,37 @@ async function main() {
   const photos = [], faces = [];
   let failed = 0;
   const t0 = Date.now();
+  // Descarrega à frente (em paralelo) enquanto a deteção corre sobre a foto atual.
+  const cached = (it) => { const hit = cache.get(it.full); return hit && (!THUMBS || hit.photo.t) ? hit : null; };
+  const download = async (it) => {
+    try { return await source.fetchBytes(it.full); }
+    catch (e) { if (it.full === it.src) throw e; const b = await source.fetchBytes(it.src); it.full = it.src; return b; }
+  };
+  const pending = new Map();
+  const AHEAD = 6;
+  const prefetch = (k) => {
+    for (let j = k; j < Math.min(items.length, k + AHEAD); j++) {
+      if (!pending.has(j) && !cached(items[j])) {
+        const pr = download(items[j]);
+        pr.catch(() => {});
+        pending.set(j, pr);
+      }
+    }
+  };
+
   for (const [i, it] of items.entries()) {
     const p = photos.length;
-    const hit = cache.get(it.full);
-    if (hit && (!THUMBS || hit.photo.t)) {
+    const hit = cached(it);
+    if (hit) {
       photos.push({ ...hit.photo, s: it.src });
       for (const f of hit.faces) faces.push({ ...f, p });
       continue;
     }
+    prefetch(i);
     try {
-      let bytes;
-      try { bytes = await source.fetchBytes(it.full); }
-      catch (e) { if (it.full === it.src) throw e; bytes = await source.fetchBytes(it.src); it.full = it.src; }
+      const pr = pending.get(i);
+      pending.delete(i);
+      const bytes = await pr;
       const tensor = decode(bytes);
       const [h, w] = tensor.shape;
       const found = await detect(tensor);
