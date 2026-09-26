@@ -72,11 +72,13 @@ Enquanto não são descobertos, chamam a atenção à vez: o chapéu abana (com 
 - 3 toques no chapéu: cartaz de PROCURADO. 6 toques (ou escrever "xinxers" no teclado): o chapéu levanta voo.
 - Carimbo CONFIDENCIAL (ou escrever "copo"): relatório de ocorrência.
 - Se for o **noivo** a tirar a selfie: cadastro com a foto dele mascarado. O noivo é reconhecido por 40 caras de referência tiradas da galeria (`data/noivo.json`, gerado com `GROOM=2 node indexer/people.mjs`; o workflow **Analisar pessoas** confirma quem é quem pelo género/idade e por quem aparece junto com quem).
+- **Jogo escondido do inspector: "Dorme, Xinxers, Dorme!"** (`sofa.js`). A página é dos noivos, por isso este jogo não está no menu nem à vista. Os cartazes de PROCURADO (3 toques no chapéu) e de ocorrência (carimbo, "copo") trazem uma pista: "última vez visto de cabeça enfiada na folga de um sofá". Carregar na pista revela o jogo no fim da página. Escrever "sofa" também o revela, e o modo ressaca deixa uma dica. Depois de descoberto, fica à vista nas visitas seguintes.
+  O jogo: Uma noite, com o Ricardo, o inspector bebeu uma garrafa de whisky e aterrou de cabeça na folga entre duas almofadas das costas de um sofá, onde se deixou ficar. Aqui a cabeça dele (da foto KO) é o dardo e a folga é o alvo. Cada cabeçada tem dois toques: o primeiro fixa a mira na horizontal e o segundo na vertical. São 3 rondas de 3 cabeçadas, e a mira fica mais tonta a cada ronda. Pontos: folga 50, mesmo ao lado 25, almofadas das costas 10, assento 2, resto 0. O sofá é um desenho inspirado numa foto do inspector (a foto não é publicada).
 - A mensagem da missão autodestrói-se. Sem provas: o inspector mostra como passou a festa. Mais de 250 fotos: "Celebridade!". Selfie do próprio inspector: não se pode investigar a si próprio.
 
 ## Jogos
 
-Por baixo da Xinxers-câmara há quatro minijogos, cada um com o seu leaderboard. Os textos foram escritos por três humoristas, escolhidos por um editor e verificados contra factos inventados. Os regulamentos aparecem também no menu Dossiês.
+Por baixo da Xinxers-câmara há três minijogos dos noivos, cada um com o seu leaderboard, e um quarto escondido (ver Easter eggs). Os textos foram escritos por três humoristas, escolhidos por um editor e verificados contra factos inventados. Os regulamentos aparecem também no menu Dossiês.
 
 - **Voa, Ricardo, Voa!** (`jogo.js`, textos em `jogo-textos.js`). Tipo Flappy Bird: a cara do noivo, de chapéu de hélice, a fugir de garrafas-paródia (Jaque Daniels, Dom Pérignão, Zé Corvo…). Os power-ups são do casamento: aliança (5 s invencível), copo-d'água (câmara lenta), fatia de bolo (+5), ramo da noiva (pontos a dobrar) e flash do inspector (limpa as garrafas). Quem ficar no topo ganha uma garrafa de queijo.
 - **A repescagem** (`toques.js`, textos em `toques-textos.js`). Em miúdo, o Ricardo foi a um casting para gravar um anúncio com o Cristiano Ronaldo e não foi selecionado. Aqui tenta outra vez, a dar toques na bola num campo "desmanchado, cheio de pedras" e de bosta, como no [vídeo](https://www.youtube.com/watch?v=gXk6PRzooq0). Toca-se na bola do lado contrário àquele para onde se quer que ela vá. No campo aparecem:
@@ -88,9 +90,7 @@ Por baixo da Xinxers-câmara há quatro minijogos, cada um com o seu leaderboard
 
   No fim de cada take, o júri do casting dá o veredicto: é sempre "não selecionado". A partir do primeiro fim de partida, o vídeo fica a rodar por baixo do jogo, sem som e em loop (`youtube-nocookie.com`, só carrega nessa altura).
 
-- **Dardos do sofá** (`sofa.js`, textos em `sofa-textos.js`). Uma noite, com o Ricardo, o inspector bebeu uma garrafa de whisky e aterrou de cabeça na folga entre duas almofadas das costas de um sofá, onde se deixou ficar. Aqui a cabeça dele (da foto KO) é o dardo e a folga é o alvo. Cada cabeçada tem dois toques: o primeiro fixa a mira na horizontal e o segundo na vertical. São 3 rondas de 3 cabeçadas, e a mira fica mais tonta a cada ronda. Pontos: folga 50, mesmo ao lado 25, almofadas das costas 10, assento 2, resto 0. O sofá é um desenho inspirado numa foto do inspector (a foto não é publicada).
-
-- **Olha a bola de Berlim!** (`berlim.js`, textos em `berlim-textos.js`). Num verão, a Inês vendeu bolas de Berlim da Berlineta na praia de Sesimbra. Neste jogo tipo Angry Birds, ela atira-as a porcos de fato de banho escondidos em estruturas de praia: torre de nadador-salvador, geleiras, pranchas, castelo de areia.
+- **Atira, Inês, Atira!** (`berlim.js`, textos em `berlim-textos.js`). Num verão, a Inês vendeu bolas de Berlim da Berlineta na praia de Sesimbra. Neste jogo tipo Angry Birds, ela atira-as a porcos de fato de banho escondidos em estruturas de praia: torre de nadador-salvador, geleiras, pranchas, castelo de areia.
   - Arrasta-se para trás e larga-se para atirar.
   - Com a bola no ar, um toque rebenta-a em creme e empurra tudo à volta.
   - São 3 níveis. Cada porco vale 1000; cada nível limpo vale 2000, mais 1500 por bola que sobre.

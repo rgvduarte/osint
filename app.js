@@ -34,7 +34,7 @@ const els = {
   lightbox: $('lightbox'), lbImg: $('lbImg'), lbBox: $('lbBox'), lbInfo: $('lbInfo'),
   lbOpen: $('lbOpen'), lbClose: $('lbClose'), lbImgWrap: $('lbImgWrap'), lbPrev: $('lbPrev'), lbNext: $('lbNext'),
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
-  wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
+  wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'), wantedPista: $('wantedPista'), sofa: $('sofa'),
   wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
   menuBtn: $('menuBtn'), menuList: $('menuList'), page: $('page'), pageTab: $('pageTab'),
   pageTitle: $('pageTitle'), pageBody: $('pageBody'), pageClose: $('pageClose'),
@@ -768,6 +768,7 @@ const POSTERS = {
   wanted: {
     title: 'Procurado', img: 'assets/inspector.jpg', name: 'Inspector Xinxers', button: 'Vai, vai, fechar!',
     alt: 'O Inspector Xinxers, de chapéu, gabardina e lupa',
+    pista: '🛋️ Pista anónima: última vez visto de cabeça enfiada na folga de um sofá. Ver a reconstituição →',
   },
   groom: {
     title: 'Cadastro', img: 'assets/noivo-mascarado.jpg', name: 'Suspeito: o noivo', button: 'Confesso!',
@@ -777,6 +778,7 @@ const POSTERS = {
     title: 'Ocorrência', img: 'assets/inspector-ko.jpg', name: 'Inspector fora de serviço', button: 'Deixá-lo dormir',
     alt: 'O inspector, de óculos escuros, deitado numa cadeira do pátio com os pés em cima da mesa',
     text: 'Casamento Inês & Ricardo, fim de tarde. Inspector encontrado em posição horizontal no pátio: óculos escuros à sombra, pés em cima da mesa, mãos cruzadas. Causa provável: copo-d’água. Estado: em recuperação.',
+    pista: '🛋️ Antecedentes: reincidente. Já foi apanhado de cabeça enfiada num sofá. Ver a reconstituição →',
   },
 };
 
@@ -789,10 +791,25 @@ function showPoster(kind, text) {
   els.wantedName.textContent = p.name;
   els.wantedText.textContent = text || p.text;
   els.wantedClose.textContent = p.button;
+  // a pista para o jogo escondido do inspector (o sofá)
+  els.wantedPista.hidden = !p.pista;
+  els.wantedPista.textContent = p.pista || '';
   if (!els.wanted.open) els.wanted.showModal();
 }
 
 const showWanted = (text) => showPoster('wanted', text);
+
+// O jogo do inspector (dardos do sofá) está escondido: a página é dos noivos. Aparece depois de se
+// seguir a pista do cartaz, ou de escrever "sofa"; e fica à vista nas visitas seguintes.
+function revelarSofa() {
+  discover('sofa');
+  if (els.wanted.open) els.wanted.close();
+  const novo = els.sofa.hidden;
+  els.sofa.hidden = false;
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  els.sofa.scrollIntoView({ behavior: calmo ? 'auto' : 'smooth' });
+  if (novo) toast('Caso reaberto: encontraste o esconderijo do inspector.');
+}
 
 function toast(text) {
   els.toast.textContent = text;
@@ -860,13 +877,14 @@ function tapHat() {
   }
 }
 
-// Palavras secretas no teclado: "xinxers" põe o chapéu a voar, "copo" abre a ocorrência.
+// Palavras secretas no teclado: "xinxers" põe o chapéu a voar, "copo" abre a ocorrência, "sofa" revela o jogo do inspector.
 let typed = '';
 function secretWords(e) {
   if (e.key.length !== 1 || e.target.closest('input, textarea')) return;
   typed = (typed + e.key.toLowerCase()).slice(-12);
   if (typed.endsWith('xinxers')) { typed = ''; flyHat(); }
   if (typed.endsWith('copo')) { typed = ''; showPoster('report'); }
+  if (typed.endsWith('sofa') || typed.endsWith('sofá')) { typed = ''; revelarSofa(); }
 }
 
 // A mensagem autodestrói-se (mais ou menos).
@@ -883,7 +901,7 @@ function selfDestruct() {
 // ---------------------------------------------------------------- menu de dossiês
 
 function buildMenu() {
-  els.menuList.replaceChildren(...DOSSIES.map((d) => {
+  els.menuList.replaceChildren(...DOSSIES.filter((d) => d.menu !== false).map((d) => {
     const li = document.createElement('li');
     li.setAttribute('role', 'none');
     const b = document.createElement('button');
@@ -921,7 +939,7 @@ function openDossie(d) {
 // Modo ressaca: a página fica como o inspector no fim do copo-d'água, durante uns segundos.
 function ressaca() {
   document.body.classList.add('ressaca');
-  toast('Modo ressaca ativado. Bebe água.');
+  toast('Modo ressaca ativado. Bebe água. E afasta-te dos sofás.');
   clearTimeout(ressaca.t);
   ressaca.t = setTimeout(() => document.body.classList.remove('ressaca'), 7000);
 }
@@ -966,6 +984,8 @@ buildMenu();
 dossiesDosJogos().then((extra) => { DOSSIES.push(...extra); buildMenu(); }).catch(() => {});
 document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
+els.wantedPista.addEventListener('click', revelarSofa);
+if (found.has('sofa')) els.sofa.hidden = false;
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
 
