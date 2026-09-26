@@ -104,6 +104,10 @@ export const TEXTOS = {
       "nome": "Pombo-correio do Júri",
       "grito": "Pombo! Traz a carta: não."
     },
+    "suja": {
+      "nome": "Defesa Rasante",
+      "grito": "A bosta pá bola!"
+    },
     "vento": {
       "nome": "Nortada Desmanchada",
       "grito": "Nortada! A bola vai de lado!"
@@ -116,6 +120,7 @@ export const TEXTOS = {
     "Art. 3.º — Acerta no olheiro com a bola: durante 8 segundos, cada toque vale 2. Sem olheiro, vale 1 e um suspiro.",
     "Art. 4.º — Acerta nas chuteiras e a bola cresce durante 6 segundos. O talento fica igual.",
     "Art. 5.º — A vaca é defesa central: bola que lhe caia em cima ressalta. A bosta que deixa não conta como assistência.",
+    "Art. 5.º-A — \"A gente pode defender\", e deve: mas quem salva a bola rente ao chão, por cima da bosta, fica com ela suja e mais pesada durante 6 segundos.",
     "Art. 6.º — O pombo e o vento (a partir dos 20 toques) desviam a bola sem aviso prévio. Não estão inscritos, mas participam.",
     "Art. 7.º — O resultado é sempre \"não selecionado\". Recursos por escrito, a analisar quando o inspector acordar."
   ],

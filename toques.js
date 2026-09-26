@@ -19,6 +19,7 @@ const EVENTOS = {
   vaca: { emoji: '🐄', efeito: 'se a bola lhe cair em cima, ressalta' },
   pombo: { emoji: '🐦', efeito: 'desvia a bola' },
   vento: { emoji: '💨', efeito: 'rajadas a partir dos 20 toques' },
+  suja: { emoji: '💩', efeito: 'defesa rasante em cima da bosta: bola mais pesada 6 s' },
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -95,7 +96,7 @@ export function initToques(root) {
       cow: null, bird: null,
       wind: { ax: 0, left: 0, next: rnd(3, 6) },
       next: { item: rnd(6, 9), cow: rnd(9, 14), bird: rnd(5, 9) },
-      olheiro: 0, chuteiras: 0,
+      olheiro: 0, chuteiras: 0, suja: 0,
       marco: 0, submitted: false,
     };
   }
@@ -122,6 +123,11 @@ export function initToques(root) {
     b.vx = Math.max(-1.2, Math.min(1.2, dx / b.r)) * 230 + rnd(-25, 25);
     b.spin = b.vx / 30;
     g.kid.kick = 0.25;
+    // "A gente pode defender e a merda pá bola": salvar a bola rente ao chão, por cima da bosta, suja-a
+    if (b.y + b.r > GROUND - 36 && g.ground.some((q) => q.tipo === 'bosta' && Math.abs(q.x - b.x) < q.w / 2 + 12)) {
+      if (!g.suja) say(fala('suja'), '#e0a060');
+      g.suja = 6;
+    }
     g.kicks += 1;
     g.score += g.olheiro > 0 ? 2 : 1;
     for (const m of MARCOS) {
@@ -136,7 +142,7 @@ export function initToques(root) {
     const b = g.ball;
     g.t += dt;
     g.cool = Math.max(0, g.cool - dt);
-    for (const k of ['olheiro', 'chuteiras']) g[k] = Math.max(0, g[k] - dt);
+    for (const k of ['olheiro', 'chuteiras', 'suja']) g[k] = Math.max(0, g[k] - dt);
 
     // vento: rajadas a partir dos 20 toques
     const w = g.wind;
@@ -148,7 +154,7 @@ export function initToques(root) {
     }
 
     // bola: gravidade a subir com os toques, raio a encolher (as chuteiras dão-lhe mais tamanho)
-    const grav = GRAVITY * (1 + Math.min(0.45, g.kicks * 0.008)) * (g.chuteiras > 0 ? 0.85 : 1);
+    const grav = GRAVITY * (1 + Math.min(0.45, g.kicks * 0.008)) * (g.chuteiras > 0 ? 0.85 : 1) * (g.suja > 0 ? 1.12 : 1);
     const rTarget = Math.max(R_MIN, R0 - g.kicks * 0.08) + (g.chuteiras > 0 ? R_BIG : 0);
     b.r += (rTarget - b.r) * Math.min(1, dt * 6);
     b.vy += grav * dt;
@@ -289,7 +295,7 @@ export function initToques(root) {
     }
   }
 
-  function drawBall(b) {
+  function drawBall(b, suja = false) {
     ctx.save();
     ctx.translate(b.x, b.y);
     ctx.rotate(b.rot);
@@ -310,9 +316,30 @@ export function initToques(root) {
       const a = -Math.PI / 2 + i * (Math.PI * 2 / 5);
       pent(Math.cos(a) * b.r * 0.92, Math.sin(a) * b.r * 0.92, b.r * 0.3);
     }
+    if (suja) {
+      ctx.fillStyle = 'rgba(107,68,35,.85)';
+      for (const [x, y, s] of [[-0.4, 0.35, 0.34], [0.35, 0.5, 0.28], [0.1, -0.45, 0.22], [-0.55, -0.15, 0.18]]) {
+        ctx.beginPath(); ctx.ellipse(x * b.r, y * b.r, s * b.r, s * b.r * 0.7, x * 3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     ctx.restore();
     ctx.beginPath(); ctx.arc(0, 0, b.r, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
+    if (suja) {
+      // moscas à volta e o cheiro a subir
+      ctx.fillStyle = INK;
+      const t = performance.now() / 1000;
+      for (let i = 0; i < 3; i++) {
+        const a = t * (3 + i) + i * 2.1;
+        ctx.beginPath(); ctx.arc(b.x + Math.cos(a) * (b.r + 10), b.y + Math.sin(a * 1.3) * (b.r + 6), 1.8, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(107,120,40,.6)'; ctx.lineWidth = 2;
+      for (let i = -1; i <= 1; i++) {
+        const x = b.x + i * b.r * 0.45, y0 = b.y - b.r - 4;
+        ctx.beginPath(); ctx.moveTo(x, y0);
+        ctx.bezierCurveTo(x - 5, y0 - 6, x + 5, y0 - 10, x, y0 - 16); ctx.stroke();
+      }
+    }
   }
 
   // o miúdo Ricardo, camisola 7, com a cara da foto
@@ -402,7 +429,7 @@ export function initToques(root) {
         ctx.globalAlpha = 1;
       }
       drawKid(g.kid.x, g.kid.kick, g.kid.joy);
-      drawBall(b);
+      drawBall(b, g.suja > 0);
       for (const rp of g.ripples) {
         ctx.strokeStyle = `rgba(216,50,42,${rp.life / 0.35})`; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.arc(rp.x, rp.y, 22 - rp.life * 30, 0, Math.PI * 2); ctx.stroke();
@@ -425,7 +452,7 @@ export function initToques(root) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     if (g) {
       outlined(String(g.score), W / 2, 64, 44);
-      const fx = [['olheiro', '🧐'], ['chuteiras', '👟']].filter(([k]) => g[k] > 0);
+      const fx = [['olheiro', '🧐'], ['chuteiras', '👟'], ['suja', '💩']].filter(([k]) => g[k] > 0);
       ctx.font = '600 13px Archivo, system-ui, sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = INK;
       fx.forEach(([k, e], i) => ctx.fillText(`${e} ${g[k].toFixed(1)}s`, W - 10, 56 + i * 18));
       ctx.textAlign = 'center';
