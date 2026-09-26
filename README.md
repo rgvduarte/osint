@@ -52,9 +52,16 @@ Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o
 - Cada cara da galeria é um vetor de 128 números (face-api). Numa galeria de milhares de caras, a distância pura dá muitos falsos positivos: quem tem uma cara "genérica" fica perto de muita gente.
 - Por isso a pontuação é **S-norm**: a distância entre a selfie e uma cara é comparada com o quanto ambas costumam estar perto de caras ao acaso. As estatísticas de cada cara da galeria vêm calculadas no índice (`indexer/format.mjs`).
 - As caras acima do rigor do cursor são **sementes**. A partir delas, a app junta as outras fotos da mesma pessoa pela semelhança **entre fotos da galeria** (mesma câmara, mesmo dia, mesma luz), desde que a selfie também se pareça com elas.
-- Medido no índice real (1.788 fotos, 8.750 caras): com o cursor no meio encontra ~82% das fotos de quem aparece em 5+ fotos; 24 caras de pessoas que não estavam no casamento recebem no total ~15 fotos erradas, no máximo 5 cada (antes: centenas só para uma delas).
+- Não há cursor: a app usa sempre o limiar de **máximo de fotos** (S-norm 3,5), com as mais prováveis primeiro e marcadas "ÉS TU!" / "PROVÁVEL" / "TALVEZ".
+- Medido no índice real (1.788 fotos, 8.750 caras): encontra ~97% das fotos de quem aparece em 5+ fotos; quem não estava no casamento vê em média 1 foto errada (máximo 14 em 24 caras testadas). Descer o limiar para 3,0 só daria 99% com o triplo das fotos erradas.
 - Juntar 2–3 selfies com ângulos diferentes ajuda: cada cara conta pela selfie com que melhor pontua.
-- O cursor vai de **mais fotos** (3,5) a **mais certeza** (5,5); por defeito 4,5.
+
+## Easter eggs
+
+- O inspector espreita no visor enquanto analisa (de madrugada, e de vez em quando, ainda em recuperação).
+- 3 toques no chapéu: cartaz de PROCURADO. 6 toques (ou escrever "xinxers" no teclado): o chapéu levanta voo.
+- Carimbo CONFIDENCIAL (ou escrever "copo"): relatório de ocorrência.
+- A mensagem da missão autodestrói-se. Sem provas: o inspector mostra como passou a festa. Mais de 250 fotos: "Celebridade!". Selfie do próprio inspector: não se pode investigar a si próprio.
 
 ## Privacidade: lê isto antes de publicar
 

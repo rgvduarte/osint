@@ -23,10 +23,12 @@ const els = {
   snap: $('snap'), fileInput: $('fileInput'), clues: $('clues'), clueRow: $('clueRow'), captureMsg: $('captureMsg'),
   clueCount: $('clueCount'), engineMsg: $('engineMsg'), photoCount: $('photoCount'),
   resultsCard: $('resultsCard'), resultsTitle: $('resultsTitle'), resultsMsg: $('resultsMsg'), grid: $('grid'),
-  threshold: $('threshold'), lightbox: $('lightbox'), lbImg: $('lbImg'), lbBox: $('lbBox'), lbInfo: $('lbInfo'),
+  lightbox: $('lightbox'), lbImg: $('lbImg'), lbBox: $('lbBox'), lbInfo: $('lbInfo'),
   lbOpen: $('lbOpen'), lbClose: $('lbClose'), lbImgWrap: $('lbImgWrap'),
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
   wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
+  wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
+  stamp: $('stamp'), nothing: $('nothing'), toast: $('toast'), peekImg: document.querySelector('#peek img'),
 };
 
 const state = {
@@ -239,8 +241,13 @@ async function addClue(canvas) {
       ? 'Apareceu mais do que uma cara: fiquei com a maior.'
       : 'Registado. Outra selfie, de outro ângulo, afina a busca.');
     search();
-    const caught = collect(+els.threshold.value).some((m) => m.kind === 'seed');
-    peek.done(caught ? 'Apanhado!' : 'Hmm… nada por agora.');
+    const hits = collect(THRESHOLD);
+    if (hits.length > CELEBRITY) {
+      setMsg(els.captureMsg, `Estás em ${hits.length} fotos. Ou és o noivo, ou a noiva, ou tens um talento raro para aparecer.`);
+      peek.done('Celebridade!');
+    } else {
+      peek.done(hits.some((m) => m.score >= LIKELY_SCORE) ? 'Apanhado!' : hits.length ? 'Hmm… talvez.' : 'Nada… por agora.');
+    }
     if (state.inspector && distance(main.descriptor, state.inspector) < 0.44) {
       setTimeout(() => showWanted('Alto! Não te podes investigar a ti próprio, Inspector. Mas pronto, as tuas fotos estão aí em baixo.'), 900);
     }
@@ -302,6 +309,11 @@ const COHORT_TOP = 200;
 const EXPAND_MARGIN = 1.5;
 const LINK_DIST = 0.38;
 const SURE_SCORE = 5.5;
+const LIKELY_SCORE = 4.5;
+// Rigor fixo no ponto de "máximo de fotos": ~97% das fotos de cada pessoa, à custa de
+// algumas fotos erradas no fim da lista (as mais prováveis aparecem primeiro).
+const THRESHOLD = 3.5;
+const CELEBRITY = 250;
 
 function cohortStats(d) {
   const faces = state.index.faces;
@@ -361,18 +373,20 @@ function collect(t) {
 
 function verdict(m) {
   if (m.kind === 'seed' && m.score >= SURE_SCORE) return { label: 'ÉS TU!', cls: 'high' };
-  if (m.kind === 'seed') return { label: 'PROVÁVEL', cls: 'mid' };
+  if (m.kind === 'seed' && m.score >= LIKELY_SCORE) return { label: 'PROVÁVEL', cls: 'mid' };
   return { label: 'TALVEZ', cls: 'low' };
 }
 
 function renderResults() {
-  const hits = collect(+els.threshold.value);
+  const hits = collect(THRESHOLD);
   els.resultsCard.hidden = false;
   els.resultsTitle.textContent = hits.length;
+  els.nothing.hidden = hits.length > 0;
   setMsg(els.resultsMsg, hits.length
-    ? 'Toca num fotograma para o ver maior. Faltam fotos? Puxa a lupa para “mais fotos”.'
-    : 'Nada marcado. Puxa a lupa para “mais fotos” ou tira outra selfie.');
+    ? 'As mais prováveis primeiro. Toca num fotograma para o ver maior.'
+    : '');
   els.grid.replaceChildren(...hits.map(renderCard));
+  return hits;
 }
 
 // Traço de lápis de cera à volta da cara: um laço à mão que passa do ponto de partida.
@@ -452,12 +466,19 @@ function openLightbox(m) {
 // ---------------------------------------------------------------- o inspector em pessoa
 
 const PEEK_LINES = ['Hmm… suspeito!', 'Deixa cá ver…', 'Vai, vai, Xinxers-lupa!', 'Elementar…'];
+const KO_LINES = ['Zzz…', 'Hã? Já vou…', 'Só mais cinco minutos…', 'Quem apagou a luz?'];
 const PEEK_MIN_MS = 1500;
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+// De madrugada (ou de vez em quando) o inspector ainda está a recuperar do copo-d'água.
+const hungover = () => { const h = new Date().getHours(); return h < 6 || Math.random() < 1 / 6; };
 
 // Enquanto a selfie é analisada, o inspector espreita no visor num braço de mola.
 function showPeek() {
   const started = Date.now();
-  els.peekSays.textContent = PEEK_LINES[Math.floor(Math.random() * PEEK_LINES.length)];
+  const ko = hungover();
+  els.peekImg.src = ko ? 'assets/inspector-ko-peek.jpg' : 'assets/inspector-peek.jpg';
+  els.peekSays.textContent = pick(ko ? KO_LINES : PEEK_LINES);
   els.peek.classList.add('show');
   return {
     done(line) {
@@ -470,9 +491,45 @@ function showPeek() {
   };
 }
 
-function showWanted(text) {
-  els.wantedText.textContent = text;
+const POSTERS = {
+  wanted: {
+    title: 'Procurado', img: 'assets/inspector.jpg', name: 'Inspector Xinxers', button: 'Vai, vai, fechar!',
+    alt: 'O Inspector Xinxers, de chapéu, gabardina e lupa',
+  },
+  report: {
+    title: 'Ocorrência', img: 'assets/inspector-ko.jpg', name: 'Inspector fora de serviço', button: 'Deixá-lo dormir',
+    alt: 'O inspector, de óculos escuros, deitado numa cadeira do pátio com os pés em cima da mesa',
+    text: 'Casamento Inês & Ricardo, fim de tarde. Inspector encontrado em posição horizontal no pátio: óculos escuros à sombra, pés em cima da mesa, mãos cruzadas. Causa provável: copo-d’água. Estado: em recuperação.',
+  },
+};
+
+function showPoster(kind, text) {
+  const p = POSTERS[kind];
+  els.wanted.className = `wanted ${kind}`;
+  els.wantedTitle.textContent = p.title;
+  els.wantedImg.src = p.img;
+  els.wantedImg.alt = p.alt;
+  els.wantedName.textContent = p.name;
+  els.wantedText.textContent = text || p.text;
+  els.wantedClose.textContent = p.button;
   if (!els.wanted.open) els.wanted.showModal();
+}
+
+const showWanted = (text) => showPoster('wanted', text);
+
+function toast(text) {
+  els.toast.textContent = text;
+  els.toast.hidden = false;
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { els.toast.hidden = true; }, 2600);
+}
+
+// Vai, vai, Xinxers-hélice: o chapéu levanta voo e volta.
+function flyHat() {
+  if (els.hat.classList.contains('fly')) return;
+  els.hat.classList.add('fly');
+  toast('Vai, vai, Xinxers-hélice!');
+  setTimeout(() => els.hat.classList.remove('fly'), 2600);
 }
 
 // Três toques no chapéu: cartaz de procurado.
@@ -485,10 +542,26 @@ function tapHat() {
   tapHat.t = setTimeout(() => els.hat.classList.remove('fast'), 900);
   const now = Date.now();
   hatTaps = [...hatTaps.filter((t) => now - t < 1500), now];
-  if (hatTaps.length >= 3) {
+  // 3 toques: cartaz; se continuar a tocar (6), o chapéu voa.
+  clearTimeout(tapHat.wait);
+  if (hatTaps.length >= 6) {
     hatTaps = [];
-    showWanted('Crime: fotografar o casamento inteiro. Recompensa: um copo no copo-d’água.');
+    flyHat();
+  } else if (hatTaps.length >= 3) {
+    tapHat.wait = setTimeout(() => {
+      hatTaps = [];
+      showWanted('Crime: fotografar o casamento inteiro. Recompensa: um copo no copo-d’água.');
+    }, 700);
   }
+}
+
+// Palavras secretas no teclado: "xinxers" põe o chapéu a voar, "copo" abre a ocorrência.
+let typed = '';
+function secretWords(e) {
+  if (e.key.length !== 1 || e.target.closest('input, textarea')) return;
+  typed = (typed + e.key.toLowerCase()).slice(-12);
+  if (typed.endsWith('xinxers')) { typed = ''; flyHat(); }
+  if (typed.endsWith('copo')) { typed = ''; showPoster('report'); }
 }
 
 // A mensagem autodestrói-se (mais ou menos).
@@ -518,10 +591,11 @@ els.fileInput.addEventListener('change', async () => {
   els.fileInput.value = '';
   if (file) addClue(await fileToCanvas(file));
 });
-els.threshold.addEventListener('input', renderResults);
 els.lbClose.addEventListener('click', () => els.lightbox.close());
 els.hat.addEventListener('click', tapHat);
 els.destruct.addEventListener('click', selfDestruct);
+els.stamp.addEventListener('click', () => showPoster('report'));
+document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
 els.lightbox.addEventListener('click', (e) => { if (e.target === els.lightbox) els.lightbox.close(); });
