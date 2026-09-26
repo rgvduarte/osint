@@ -28,6 +28,7 @@ const els = {
   hat: $('hat'), peek: $('peek'), peekSays: $('peekSays'), mission: $('mission'), destruct: $('destruct'),
   wanted: $('wanted'), wantedText: $('wantedText'), wantedClose: $('wantedClose'),
   wantedTitle: $('wantedTitle'), wantedImg: $('wantedImg'), wantedName: $('wantedName'),
+  maybeBox: $('maybeBox'), maybeButton: $('maybeButton'), maybeGrid: $('maybeGrid'),
   zipBox: $('zipBox'), zipButton: $('zipButton'), zipNote: $('zipNote'),
   stamp: $('stamp'), nothing: $('nothing'), hatHint: $('hatHint'), koButton: $('koButton'), toast: $('toast'), peekImg: document.querySelector('#peek img'),
 };
@@ -250,11 +251,12 @@ async function addClue(canvas) {
     }
     // Na selfie, a cara que interessa é a maior.
     const main = found.reduce((a, b) => (b.detection.box.area > a.detection.box.area ? b : a));
-    state.refs.push(main.descriptor);
+    // Média com a selfie espelhada: um descritor mais estável (menos sensível a pose e luz).
+    state.refs.push(await steadyDescriptor(canvas, main));
     renderClue(canvas, main.detection.box);
     setMsg(els.captureMsg, found.length > 1
       ? 'Apareceu mais do que uma cara: fiquei com a maior.'
-      : 'Registado. Outra selfie, de outro ângulo, afina a busca.');
+      : 'Registado. Tira mais uma selfie, de lado ou a sorrir: cada selfie a mais apanha fotos novas.');
     search();
     const hits = collect(THRESHOLD);
     const groom = isGroom(main.descriptor);
@@ -278,6 +280,22 @@ async function addClue(canvas) {
   } finally {
     els.snap.disabled = false;
     document.body.classList.remove('busy');
+  }
+}
+
+async function steadyDescriptor(canvas, main) {
+  try {
+    const flip = document.createElement('canvas');
+    flip.width = canvas.width; flip.height = canvas.height;
+    const ctx = flip.getContext('2d');
+    ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+    ctx.drawImage(canvas, 0, 0);
+    const other = await withTimeout(runDetection(flip), DETECT_MS, 'A análise');
+    if (!other.length) return main.descriptor;
+    const f = other.reduce((a, b) => (b.detection.box.area > a.detection.box.area ? b : a));
+    return main.descriptor.map((x, i) => (x + f.descriptor[i]) / 2);
+  } catch {
+    return main.descriptor;
   }
 }
 
@@ -326,13 +344,15 @@ const COHORT_TOP = 200;
 // Sementes: caras com pontuação acima do rigor do cursor. Expansão: outras fotos da mesma
 // pessoa, reconhecidas pela semelhança entre fotos da galeria (mesma câmara, mesma luz),
 // desde que a selfie também se pareça com elas (rigor - EXPAND_MARGIN).
-const EXPAND_MARGIN = 1.5;
+const EXPAND_MARGIN = 2.5;
 const LINK_DIST = 0.38;
 const SURE_SCORE = 5.5;
 const LIKELY_SCORE = 4.5;
 // Rigor fixo no ponto de "máximo de fotos": ~97% das fotos de cada pessoa, à custa de
 // algumas fotos erradas no fim da lista (as mais prováveis aparecem primeiro).
 const THRESHOLD = 3.5;
+// Abaixo do limiar ainda há fotos possíveis: ficam numa secção à parte, atrás de um botão.
+const MAYBE_THRESHOLD = 2.5;
 const CELEBRITY = 250;
 
 function cohortStats(d) {
@@ -391,7 +411,18 @@ function collect(t) {
   return [...best.values()].sort((a, b) => b.score - a.score);
 }
 
+function showMaybe() {
+  els.maybeGrid.replaceChildren(...state.maybe.map(renderCard));
+  els.maybeGrid.hidden = false;
+  els.maybeBox.hidden = true;
+  // quem pediu "mais", leva-as também no zip
+  state.hits = [...state.hits, ...state.maybe];
+  const n = state.hits.length;
+  els.zipNote.textContent = `Leva as ${n} provas num .zip (~${Math.max(1, Math.round(n * 0.8))} MB), incluindo as duvidosas.`;
+}
+
 function verdict(m) {
+  if (m.kind === 'maybe') return { label: 'SERÁ?', cls: 'low' };
   if (m.kind === 'seed' && m.score >= SURE_SCORE) return { label: 'ÉS TU!', cls: 'high' };
   if (m.kind === 'seed' && m.score >= LIKELY_SCORE) return { label: 'PROVÁVEL', cls: 'mid' };
   return { label: 'TALVEZ', cls: 'low' };
@@ -406,6 +437,13 @@ function renderResults() {
     ? 'As mais prováveis primeiro. Toca num fotograma para o ver maior.'
     : '');
   els.grid.replaceChildren(...hits.map(renderCard));
+  const seen = new Set(hits.map((m) => m.face.p));
+  const maybe = collect(MAYBE_THRESHOLD).filter((m) => !seen.has(m.face.p)).map((m) => ({ ...m, kind: 'maybe' }));
+  state.maybe = maybe;
+  els.maybeBox.hidden = !maybe.length;
+  els.maybeGrid.hidden = true;
+  els.maybeGrid.replaceChildren();
+  els.maybeButton.textContent = `Mostrar mais ${maybe.length} foto${maybe.length === 1 ? '' : 's'} em que talvez estejas`;
   state.hits = hits;
   els.zipBox.hidden = !hits.length;
   if (!state.zipping) {
@@ -771,6 +809,7 @@ els.destruct.addEventListener('click', selfDestruct);
 els.stamp.addEventListener('click', () => { discover('stamp'); showPoster('report'); });
 els.koButton.addEventListener('click', () => showPoster('report'));
 els.zipButton.addEventListener('click', downloadZip);
+els.maybeButton.addEventListener('click', showMaybe);
 document.addEventListener('keydown', secretWords);
 els.wantedClose.addEventListener('click', () => els.wanted.close());
 els.wanted.addEventListener('click', (e) => { if (e.target === els.wanted) els.wanted.close(); });
