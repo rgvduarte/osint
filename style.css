@@ -115,6 +115,8 @@ a { color: inherit; }
   text-transform: uppercase;
   transform: rotate(-3deg);
 }
+
+.page-title:focus { outline: none; }
 .page-title {
   margin: 12px 0 10px;
   font-size: clamp(28px, 8vw, 38px);

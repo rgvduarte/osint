@@ -60,6 +60,10 @@ Todas as opções estão documentadas no topo de `indexer/build-index.mjs`. Se o
 
 O botão **Vai, vai, Xinxers-zip!** junta num .zip todas as fotos encontradas (versão de 2000px, ~0,8 MB cada), numeradas do mais certo para o menos certo, com um `LEIA-ME.txt` do inspector sobre os noivos. O zip é montado no próprio telemóvel ([fflate](https://github.com/101arrowz/fflate)); o CDN da galeria permite pedidos de outros sites (CORS `*`).
 
+## Menu "Dossiês"
+
+"Sobre o casamento" (relatório final do processo n.º 0506/2026) e dossiês-piada: direitos do convidado, livro de reclamações, apoio técnico, achados e perdidos, termos e condições, PROCURADO e modo ressaca. O conteúdo está em `dossies.js`: foi escrito por quatro "escritores" com ângulos diferentes, escolhido por um júri e verificado contra factos inventados. Só usa factos reais (números do índice, fotos dadas pelo inspector).
+
 ## Easter eggs
 
 Enquanto não são descobertos, chamam a atenção à vez: o chapéu abana (com a nota "toca 3×!"), o carimbo carimba e o rastilho da autodestruição faísca. O telemóvel lembra-se dos que já foram descobertos (`localStorage`); com "reduzir movimento" ligado no sistema não há animações.

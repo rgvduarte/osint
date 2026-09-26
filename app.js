@@ -813,11 +813,14 @@ function toggleMenu(open = els.menuList.hidden) {
 
 function openDossie(d) {
   if (d.action === 'ressaca') return ressaca();
+  if (d.action === 'wanted') return showWanted(d.text);
   els.pageTab.textContent = d.tab || 'Dossiê';
   els.pageTitle.textContent = d.title || d.label;
   els.pageBody.innerHTML = d.html; // conteúdo fixo do próprio site (dossies.js)
-  els.page.scrollTop = 0;
   els.page.showModal();
+  // o foco vai para o botão "Arquivar", lá em baixo: volta ao início do dossiê
+  els.pageTitle.focus({ preventScroll: true });
+  els.page.scrollTop = 0;
 }
 
 // Modo ressaca: a página fica como o inspector no fim do copo-d'água, durante uns segundos.
