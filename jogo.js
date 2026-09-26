@@ -1,7 +1,7 @@
 // O voo do noivo: minijogo tipo Flappy Bird com a cara do Ricardo (foto antiga, mascarado)
 // a desviar-se de garrafas-paródia, com power-ups de casamento e um leaderboard.
 import { TEXTOS } from './jogo-textos.js';
-import { criarPlacar, ligarSubmissao, load, save } from './placar.js';
+import { criarPlacar, ligarSubmissao, mostrarPainel, calmo, load, save } from './placar.js';
 
 const W = 360, H = 540;              // coordenadas lógicas do canvas
 const GRAVITY = 1500, FLAP = -430;   // px/s², px/s
@@ -193,7 +193,8 @@ export function initJogo(root) {
       : g.y > H / 2 ? 'O noivo aterrou na pista de dança. De cara.' : 'O noivo foi ao teto. Literalmente.';
     if (newBest && g.score > 0) ui.overText.textContent += ' ' + TEXTOS.recorde_frases[Math.floor(Math.random() * TEXTOS.recorde_frases.length)];
     resetPainel(g.score > 0);
-    ui.over.hidden = false;
+    mostrarPainel(ui);
+    placar.render(); // entretanto, outros convidados podem ter jogado
   }
 
   // ---- desenho
@@ -310,7 +311,7 @@ export function initJogo(root) {
         ctx.fillText(POWER[it.id].emoji, it.x, y + 1);
       }
     }
-    const y = g ? g.y : H * 0.42 + Math.sin(performance.now() / 300) * 8;
+    const y = g ? g.y : H * 0.42 + (calmo() ? 0 : Math.sin(performance.now() / 300) * 8);
     const tilt = g ? Math.max(-0.5, Math.min(1.1, g.vy / 700)) : 0;
     drawHead(90, y, tilt);
 
@@ -349,7 +350,8 @@ export function initJogo(root) {
     raf = requestAnimationFrame(loop);
   }
   // só anima quando o jogo está visível
-  const io = new IntersectionObserver(([e]) => {
+  const io = new IntersectionObserver((entries) => {
+    const e = entries[entries.length - 1];
     cancelAnimationFrame(raf);
     if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); }
     else if (mode === 'playing') die(null, true);
@@ -361,13 +363,15 @@ export function initJogo(root) {
   canvas.addEventListener('click', () => { if (mode === 'intro') flap(); });
   document.addEventListener('keydown', (e) => {
     if (!(e.code === 'Space' || e.code === 'ArrowUp')) return;
-    if (e.target.closest('input, textarea, button, dialog')) return;
+    if (e.target.closest('input, textarea, button, a, dialog')) return;
+    if (mode === 'playing') { e.preventDefault(); if (!e.repeat) flap(); return; }
+    if (mode !== 'intro' || e.repeat) return;
     const r = canvas.getBoundingClientRect();
     if (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) < r.height * 0.6) return; // o jogo tem de estar à vista
     e.preventDefault();
     flap();
   });
-  ui.again.addEventListener('click', () => { newGame(); setMode('playing'); ui.over.hidden = true; });
+  ui.again.addEventListener('click', () => { ui.again.blur(); newGame(); setMode('playing'); ui.over.hidden = true; });
 
   placar.render();
   draw();

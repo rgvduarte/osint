@@ -9,13 +9,30 @@ const safe = (fn, fallback) => { try { return fn(); } catch { return fallback; }
 export const load = (k, d) => safe(() => JSON.parse(localStorage.getItem(k)) ?? d, d);
 export const save = (k, v) => safe(() => localStorage.setItem(k, JSON.stringify(v)));
 export const nomeGuardado = () => { const n = load(NAME_KEY, ''); return typeof n === 'string' ? n : ''; };
+export const calmo = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// pedidos ao Firebase com prazo, para o botão não ficar preso em "A registar…" com rede fraca
+function pedir(url, opts = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 10000);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(t));
+}
+
+// Mostra o painel de fim. Durante meio segundo ignora toques: quem estava a jogar continua a
+// tocar no ecrã e não deve carregar sem querer em "Outra vez!" ou no link do vídeo.
+export function mostrarPainel(ui) {
+  ui.over.style.pointerEvents = 'none';
+  ui.over.hidden = false;
+  ui.overTitle.focus({ preventScroll: true }); // leitores de ecrã: anuncia o resultado
+  setTimeout(() => { ui.over.style.pointerEvents = ''; }, 600);
+}
 
 // path: nó na base de dados ('voo', 'toques'); localKey: chave do leaderboard local
 export function criarPlacar({ path, localKey, board, note }) {
   async function submit(name, score) {
     save(NAME_KEY, name);
     if (FIREBASE_DB) {
-      const res = await fetch(`${FIREBASE_DB}/${path}.json`, {
+      const res = await pedir(`${FIREBASE_DB}/${path}.json`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, score, t: { '.sv': 'timestamp' } }),
@@ -33,11 +50,17 @@ export function criarPlacar({ path, localKey, board, note }) {
     let rows = [];
     if (FIREBASE_DB) {
       try {
-        const res = await fetch(`${FIREBASE_DB}/${path}.json?orderBy="score"&limitToLast=60`);
+        // os melhores 500 registos (cada um tem poucos bytes); depois fica só o melhor de cada pessoa
+        const res = await pedir(`${FIREBASE_DB}/${path}.json?orderBy="score"&limitToLast=500`);
+        if (!res.ok) throw new Error(`leaderboard: ${res.status}`);
         rows = Object.values((await res.json()) || {});
         note.textContent = 'Leaderboard de todos os convidados.';
-      } catch {
-        note.textContent = 'O cartório está fechado (sem rede). Tenta mais tarde.';
+      } catch (e) {
+        // mantém o quadro que já lá estava
+        note.textContent = e.message.startsWith('leaderboard')
+          ? `O cartório recusou o pedido (${e.message.replace('leaderboard: ', 'erro ')}).`
+          : 'O cartório está fechado (sem rede). Tenta mais tarde.';
+        return;
       }
     } else {
       rows = load(localKey, []);
@@ -71,6 +94,13 @@ export function criarPlacar({ path, localKey, board, note }) {
 // Painel de fim de jogo: nome + "Entrar no leaderboard". partida() devolve { score, submitted }.
 // Devolve reset(podeSubmeter), para chamar em cada fim de jogo.
 export function ligarSubmissao({ name, submit }, placar, partida) {
+  // a tecla "Enviar" do teclado do telemóvel também regista
+  name.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    name.blur();
+    submit.click();
+  });
   submit.addEventListener('click', async () => {
     const p = partida();
     const nome = name.value.trim().slice(0, 20);
@@ -79,13 +109,16 @@ export function ligarSubmissao({ name, submit }, placar, partida) {
     p.submitted = true;
     submit.disabled = true;
     submit.textContent = 'A registar no cartório…';
-    try {
-      await placar.submit(nome, p.score);
-      submit.textContent = 'Registado!';
-    } catch {
-      p.submitted = false;
-      submit.disabled = false;
-      submit.textContent = 'O cartório falhou. Tenta outra vez';
+    let ok = true;
+    try { await placar.submit(nome, p.score); } catch { ok = false; }
+    // se entretanto já começou outra partida, o botão já não é desta
+    if (partida() === p) {
+      if (ok) submit.textContent = 'Registado!';
+      else {
+        p.submitted = false;
+        submit.disabled = false;
+        submit.textContent = 'O cartório falhou. Tenta outra vez';
+      }
     }
     placar.render();
   });

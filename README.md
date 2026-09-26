@@ -100,13 +100,14 @@ Por baixo da Xinxers-câmara há dois minijogos, cada um com o seu leaderboard. 
          ".indexOn": ["score"],
          "$id": {
            ".write": "($jogo === 'voo' || $jogo === 'toques') && !data.exists()",
-           ".validate": "newData.hasChildren(['name', 'score', 't']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 5000 && newData.child('t').val() == now"
+           ".validate": "newData.hasChildren(['name', 'score', 't']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 5000 && newData.child('t').val() == now",
+           "$outro": { ".validate": false }
          }
        }
      }
    }
    ```
-   Qualquer pessoa pode ler os dois leaderboards (`voo` e `toques`) e acrescentar resultados; ninguém pode alterar nem apagar os que já lá estão.
+   Qualquer pessoa pode ler os dois leaderboards (`voo` e `toques`) e acrescentar resultados; ninguém pode alterar nem apagar os que já lá estão, nem juntar campos além de nome, pontos e hora.
 3. Copia o URL da base de dados (algo como `https://xinxers-default-rtdb.europe-west1.firebasedatabase.app`) para `FIREBASE_DB` em `placar.js`.
 
 O leaderboard é à base da confiança: quem souber usar o `curl` consegue inventar um resultado. Antes de entregar o prémio, confirma o vencedor na consola do Firebase (*Realtime Database → Dados*), onde podes também apagar batotas.
