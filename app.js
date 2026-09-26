@@ -1,4 +1,6 @@
 import { DOSSIES } from './dossies.js';
+import { fivePoints, alignedInput, l2normalize, ARC_SIZE } from './arcface.js';
+
 // Inspector Xinxers — compara uma selfie com o índice pré-calculado (data/faces.json).
 // Tudo corre no browser; a selfie nunca sai do dispositivo.
 
@@ -6,7 +8,12 @@ const FACEAPI_VERSION = '1.7.15';
 const TFJS_VERSION = '4.22.0'; // versão do TensorFlow.js incluída no face-api
 const CDN = `https://cdn.jsdelivr.net/npm/@vladmandic/face-api@${FACEAPI_VERSION}`;
 const WASM_CDN = `https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@${TFJS_VERSION}/dist/`;
-const INDEX_URL = 'data/faces.json';
+const INDEX_URL = 'data/index-arc.json';
+// Reconhecimento: ArcFace (InsightFace w600k_mbf) no ONNX Runtime Web; o face-api só deteta
+// a cara e os 68 pontos para o alinhamento (arcface.js, o mesmo código do indexador).
+const ORT_VERSION = '1.22.0';
+const ORT_CDN = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
+const ARC_MODEL = 'models/w600k_mbf.onnx';
 
 // No Safari (sobretudo iPhone) o motor WebGL do TensorFlow.js pode bloquear na primeira análise.
 // Aí o WebAssembly é o mais fiável; nos outros browsers o WebGL é mais rápido.
@@ -63,6 +70,12 @@ function loadModels() {
     engine('A acordar o inspector…');
     faceapi = await import(`${CDN}/dist/face-api.esm.js`);
     faceapi.tf.setWasmPaths(WASM_CDN);
+    engine('A descarregar o ArcFace (≈14 MB, só da primeira vez)…');
+    const ort = await import(`${ORT_CDN}ort.wasm.min.mjs`);
+    ort.env.wasm.wasmPaths = ORT_CDN;
+    ort.env.wasm.numThreads = 1; // o GitHub Pages não dá isolamento cross-origin para threads
+    state.ort = ort;
+    state.arc = await ort.InferenceSession.create(ARC_MODEL, { executionProviders: ['wasm'] });
     return nextBackend();
   })());
   return modelsReady;
@@ -85,9 +98,9 @@ async function nextBackend() {
     try {
       if (!(await withTimeout(faceapi.tf.setBackend(name), 20_000, name))) continue;
       await faceapi.tf.ready();
-      const nets = [faceapi.nets.ssdMobilenetv1, faceapi.nets.faceLandmark68Net, faceapi.nets.faceRecognitionNet];
+      const nets = [faceapi.nets.ssdMobilenetv1, faceapi.nets.faceLandmark68Net];
       for (const net of nets) if (net.isLoaded) net.dispose();
-      engine('A descarregar os modelos (≈12 MB, só da primeira vez)…');
+      engine('A descarregar o detetor de caras (≈6 MB, só da primeira vez)…');
       await Promise.all(nets.map((net) => net.loadFromUri(`${CDN}/model`)));
       engine('A afinar a lupa…');
       const blank = document.createElement('canvas');
@@ -104,7 +117,24 @@ async function nextBackend() {
 
 function runDetection(canvas) {
   const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 });
-  return faceapi.detectAllFaces(canvas, opts).withFaceLandmarks().withFaceDescriptors();
+  return faceapi.detectAllFaces(canvas, opts).withFaceLandmarks();
+}
+
+// ArcFace da cara alinhada, em média com a versão espelhada (como no indexador).
+async function arcDescriptor(canvas, det) {
+  const { width: w, height: h } = canvas;
+  const px = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const input = alignedInput(px, w, h, 4, fivePoints(det.landmarks.positions));
+  const S = ARC_SIZE, mirrored = new Float32Array(input.length);
+  for (let c = 0; c < 3; c++) for (let v = 0; v < S; v++) for (let u = 0; u < S; u++) {
+    mirrored[c * S * S + v * S + u] = input[c * S * S + v * S + (S - 1 - u)];
+  }
+  const run = async (x) => {
+    const feeds = { [state.arc.inputNames[0]]: new state.ort.Tensor('float32', x, [1, 3, S, S]) };
+    return (await state.arc.run(feeds))[state.arc.outputNames[0]].data;
+  };
+  const a = await run(input), b = await run(mirrored);
+  return l2normalize(a.map((x, i) => x + b[i]));
 }
 
 // Deteção com tempo limite: se o motor atual encravar, muda para o seguinte e tenta outra vez.
@@ -254,8 +284,8 @@ async function addClue(canvas) {
     }
     // Na selfie, a cara que interessa é a maior.
     const main = found.reduce((a, b) => (b.detection.box.area > a.detection.box.area ? b : a));
-    // Média com a selfie espelhada: um descritor mais estável (menos sensível a pose e luz).
-    state.refs.push(await steadyDescriptor(canvas, main));
+    main.descriptor = await arcDescriptor(canvas, main);
+    state.refs.push(main.descriptor);
     renderClue(canvas, main.detection.box);
     setMsg(els.captureMsg, found.length > 1
       ? 'Apareceu mais do que uma cara: fiquei com a maior.'
@@ -286,21 +316,6 @@ async function addClue(canvas) {
   }
 }
 
-async function steadyDescriptor(canvas, main) {
-  try {
-    const flip = document.createElement('canvas');
-    flip.width = canvas.width; flip.height = canvas.height;
-    const ctx = flip.getContext('2d');
-    ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
-    ctx.drawImage(canvas, 0, 0);
-    const other = await withTimeout(runDetection(flip), DETECT_MS, 'A análise');
-    if (!other.length) return main.descriptor;
-    const f = other.reduce((a, b) => (b.detection.box.area > a.detection.box.area ? b : a));
-    return main.descriptor.map((x, i) => (x + f.descriptor[i]) / 2);
-  } catch {
-    return main.descriptor;
-  }
-}
 
 function renderClue(canvas, box) {
   const pad = box.width * 0.25;
