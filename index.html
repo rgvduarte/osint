@@ -197,6 +197,46 @@
         <button class="text-btn" id="regrasToquesBtn">Regulamento do casting</button>
       </div>
     </section>
+
+    <section class="jogo sofa" id="sofa" aria-labelledby="sofaTitulo">
+      <span class="tab">Auto de ocorrência</span>
+      <span class="prize" data-t="premio"></span>
+      <div class="pt-intro">
+        <img class="pt-face" src="assets/inspector-ko-peek.jpg" alt="O Inspector Xinxers, a dormir">
+        <h2 class="pt-title" id="sofaTitulo" data-t="titulo"></h2>
+      </div>
+      <p class="pt-text" data-t="intro"></p>
+
+      <div class="arcade">
+        <span class="plate" data-t="nome_jogo"></span>
+        <div class="screen">
+          <canvas width="360" height="540" aria-label="Jogo de dardos: toca duas vezes para fixar a mira e atirar a cabeça do inspector à folga do sofá"></canvas>
+          <div class="over" data-over hidden>
+            <span class="over-stamp" data-t="carimbo"></span>
+            <p class="over-title" data-over-title tabindex="-1"></p>
+            <p class="over-text" data-over-text></p>
+            <p class="over-verdict" data-over-verdict></p>
+            <label class="over-name">O teu nome
+              <input data-name maxlength="20" autocomplete="nickname" enterkeyhint="send" placeholder="Nome e apelido">
+            </label>
+            <button class="btn" data-submit>Entrar no leaderboard</button>
+            <div class="over-links">
+              <button class="text-btn light" data-again>Outra vez!</button>
+            </div>
+          </div>
+        </div>
+        <p class="fine arcade-help">Dois toques por cabeçada: o primeiro fixa a mira na horizontal, o segundo na vertical, e lá vai cabeça. 3 rondas de 3 cabeçadas; a cada ronda a mira fica mais tonta.</p>
+      </div>
+
+      <ul class="powers" data-powers aria-label="Pontos por zona"></ul>
+
+      <div class="board">
+        <h3>Leaderboard</h3>
+        <ol data-board></ol>
+        <p class="fine" data-board-note></p>
+        <button class="text-btn" id="regrasSofaBtn">Regulamento do sofá</button>
+      </div>
+    </section>
   </main>
 
   <dialog id="lightbox">
