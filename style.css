@@ -961,6 +961,7 @@ dialog::backdrop { background: rgba(18, 17, 16, .94); }
 .toques .pt-intro, .sofa .pt-intro, .berlim .pt-intro { padding-right: 104px; }
 .berlim .prize { white-space: pre-line; transform: rotate(-6deg); }
 .berlim .screen { background: #dff0f6; }
+.berlim .screen.playing canvas { touch-action: pan-y; } /* a mira começa na bola; deslizar noutro sítio faz scroll */
 .sofa .prize { white-space: pre-line; transform: rotate(7deg); }
 .sofa .screen { background: #efe6d2; }
 .sofa .screen.playing canvas { touch-action: pan-y; } /* o toque conta ao soltar; deslizar faz scroll */

@@ -9,7 +9,8 @@ const HAND = { x: 80, y: GROUND - 82 };      // de onde sai a bola
 const BALL_R = 11, MAX_PULL = 90, MAX_SPEED = 11.5; // px, px, px por passo de 1/60 s
 const STEP = 1000 / 60;
 const POP = 2.4;                             // velocidade de impacto (px/passo) que derrota um porco
-const CREME_R = 85;                          // raio do rebentamento de creme
+const CREME_R = 85;                          // raio do empurrão do creme
+const CREME_KO = 56;                         // raio em que o creme derruba porcos (é o que se vê no salpico)
 const PTS = { porco: 1000, nivel: 2000, bola: 1500 };
 const LB_KEY = 'xinxers-berlim-local', BEST_KEY = 'xinxers-berlim-recorde';
 const INK = '#2a1f17';
@@ -64,7 +65,7 @@ function carregarMatter() {
     const s = document.createElement('script');
     s.src = 'vendor/matter.min.js';
     s.onload = () => res(window.Matter);
-    s.onerror = () => { matterP = null; rej(new Error('Não foi possível carregar a física (matter.js)')); };
+    s.onerror = () => { matterP = null; s.remove(); rej(new Error('Não foi possível carregar a física (matter.js)')); };
     document.head.append(s);
   });
   return matterP;
@@ -114,7 +115,7 @@ export function initBerlim(root) {
 
   // ---- mundo
   function construir(n) {
-    const { Engine, Bodies, Composite, Events, Sleeping } = M;
+    const { Engine, Bodies, Composite, Events } = M;
     const engine = Engine.create({ enableSleeping: true });
     engine.positionIterations = 8; engine.velocityIterations = 6;
     const chao = Bodies.rectangle(W / 2, GROUND + 30, W * 4, 60, { isStatic: true, friction: 0.9, label: 'chao' });
@@ -134,7 +135,7 @@ export function initBerlim(root) {
         b.plugin = { k: p.k, w: p.w, h: p.h, cor: p.cor || COR[p.k], bandeira: p.bandeira };
       }
       Composite.add(engine.world, b);
-      Sleeping.set(b, true); // tudo quieto até levar com a primeira bola
+      // (começam acordadas: se começassem a dormir, as de cima ficavam a flutuar quando o apoio caía)
     }
     Events.on(engine, 'collisionStart', (ev) => {
       for (const pair of ev.pairs) {
@@ -187,10 +188,15 @@ export function initBerlim(root) {
   }
 
   let aArrancar = false;
+  let carga = ''; // '' | 'a' (a carregar a física) | 'erro'
   async function start() {
     if (aArrancar) return;
     aArrancar = true;
-    try { M = M || await carregarMatter(); } catch (e) { console.warn(e); return; } finally { aArrancar = false; }
+    if (!M) { carga = 'a'; draw(); }
+    try {
+      M = M || await Promise.race([carregarMatter(), new Promise((_, rej) => setTimeout(() => rej(new Error('prazo')), 15000))]);
+      carga = '';
+    } catch (e) { console.warn(e); carga = 'erro'; matterP = null; draw(); return; } finally { aArrancar = false; }
     suspensa = false;
     newGame();
     ui.over.hidden = true;
@@ -236,7 +242,7 @@ export function initBerlim(root) {
       if (b.isStatic) continue;
       const dx = b.position.x - c.x, dy = b.position.y - c.y, d = Math.hypot(dx, dy);
       if (d > CREME_R) continue;
-      if (b.label === 'porco' && d < 44) { derrotar(b); continue; }
+      if (b.label === 'porco' && d < CREME_KO) { derrotar(b); continue; }
       const f = (1 - d / CREME_R) * 7;
       M.Sleeping.set(b, false);
       M.Body.setVelocity(b, { x: b.velocity.x + (dx / (d || 1)) * f, y: b.velocity.y + (dy / (d || 1)) * f - f * 0.3 });
@@ -292,7 +298,9 @@ export function initBerlim(root) {
     for (const p of g.remover) M.Composite.remove(g.mundo.engine.world, p);
     g.remover = [];
     // porcos que caem para fora do ecrã também contam
-    for (const p of vivos()) if (p.position.y > H + 40 || p.position.x < -40 || p.position.x > W + 40) derrotar(p);
+    for (const p of vivos()) if (p.position.y > H + 40 || p.position.x + p.plugin.r < 0 || p.position.x - p.plugin.r > W) derrotar(p);
+    // o último porco pode cair já depois do tiro (a rolar, empurrado): fecha o nível na mesma
+    if ((mode === 'pronto' || mode === 'mira') && !vivos().length) { drag = null; g.pull = null; g.acertou = true; return fimDoTiro(); }
     if (mode === 'voo') {
       g.voo += dt;
       const b = g.bola;
@@ -347,7 +355,7 @@ export function initBerlim(root) {
     // mar
     ctx.fillStyle = '#2f7fb5'; ctx.fillRect(0, 300, W, 70);
     ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2;
-    const off = ((g ? g.t : performance.now() / 1000) * 12) % 40;
+    const off = calmo() ? 0 : ((g ? g.t : performance.now() / 1000) * 12) % 40;
     for (let y = 315; y < 370; y += 16) {
       ctx.beginPath();
       for (let x = -40 + off; x < W + 40; x += 40) { ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 10, y - 4, x + 20, y); }
@@ -526,7 +534,7 @@ export function initBerlim(root) {
       } else if (f.k === 'creme') {
         ctx.globalAlpha = 1 - f.t; ctx.fillStyle = '#fff3c4'; ctx.strokeStyle = '#e0b85a'; ctx.lineWidth = 2;
         for (let i = 0; i < 10; i++) {
-          const an = i * 0.63, d = f.t * CREME_R;
+          const an = i * 0.63, d = f.t * CREME_KO;
           ctx.beginPath(); ctx.arc(f.x + Math.cos(an) * d, f.y + Math.sin(an) * d, 9 * (1 - f.t) + 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         }
         ctx.globalAlpha = 1;
@@ -564,7 +572,7 @@ export function initBerlim(root) {
       drawBola(HAND.x + (aim ? aim.x : 0), HAND.y + (aim ? aim.y : 0));
     }
     if (!g) {
-      outlined('Toca para jogar!', W / 2, 150, 26);
+      outlined(carga === 'a' ? 'A carregar a praia…' : carga === 'erro' ? 'Sem rede. Toca outra vez' : 'Toca para jogar!', W / 2, 150, 26);
       ctx.font = '600 14px Archivo, system-ui, sans-serif'; ctx.fillStyle = INK;
       ctx.fillText(`O teu recorde: ${best} pontos`, W / 2, 176);
       return;
@@ -579,7 +587,7 @@ export function initBerlim(root) {
     ctx.textAlign = 'center';
     if (mode === 'pronto' && !g.kb.on) {
       ctx.font = '700 12px Archivo, system-ui, sans-serif'; ctx.fillStyle = INK;
-      ctx.fillText('Arrasta para trás e larga para atirar', W / 2, H - 14);
+      ctx.fillText('Arrasta a bola para trás e larga', W / 2, H - 14);
     } else if (mode === 'voo' && !g.creme) {
       ctx.font = '700 12px Archivo, system-ui, sans-serif'; ctx.fillStyle = INK;
       ctx.fillText('Toca para rebentar a bola em creme!', W / 2, H - 14);
@@ -625,30 +633,48 @@ export function initBerlim(root) {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
   };
+  // A mira só começa com o dedo perto da bola: deslizar noutro sítio do jogo faz scroll (touch-action: pan-y)
+  // e não gasta bolas. Com a bola no ar, o creme é um toque curto (um deslizar não conta).
+  const pertoDaBola = (p) => Math.hypot(p.x - HAND.x, p.y - HAND.y) < 80;
+  canvas.addEventListener('touchstart', (e) => {
+    // a mira a sério: aqui o browser não pode transformar o gesto em scroll
+    if (mode === 'pronto' && !suspensa && pertoDaBola(toCanvas(e.touches[0]))) e.preventDefault();
+  }, { passive: false });
+  let toque = null; // toque curto com a bola no ar
   canvas.addEventListener('pointerdown', (e) => {
-    if (!jogando() || suspensa || !e.isPrimary) return; // (dois dedos não valem dois toques)
+    if (!jogando() || suspensa) return;
+    if (mode === 'voo') { toque = { id: e.pointerId, x: e.clientX, y: e.clientY }; return; }
+    if (mode !== 'pronto' || drag) return;
+    const p = toCanvas(e);
+    if (!pertoDaBola(p)) return;
     e.preventDefault();
-    if (mode === 'voo') return creme();
-    if (mode !== 'pronto') return;
-    drag = toCanvas(e);
+    drag = { ...p, id: e.pointerId };
     g.kb.on = false;
     canvas.setPointerCapture?.(e.pointerId);
     g.pull = { x: 0, y: 0 };
     setMode('mira');
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (mode !== 'mira' || !drag) return;
+    if (mode !== 'mira' || !drag || e.pointerId !== drag.id) return;
     const p = toCanvas(e);
     g.pull = { x: drag.x - p.x, y: drag.y - p.y };
   });
-  const largar = () => {
-    if (mode !== 'mira') return;
+  canvas.addEventListener('pointerup', (e) => {
+    if (toque && e.pointerId === toque.id) {
+      const curto = Math.hypot(e.clientX - toque.x, e.clientY - toque.y) < 12;
+      toque = null;
+      if (curto && mode === 'voo') creme();
+      return;
+    }
+    if (mode !== 'mira' || !drag || e.pointerId !== drag.id) return;
     const pull = g.pull; drag = null;
     if (!pull || Math.hypot(pull.x, pull.y) < 14) { g.pull = null; setMode('pronto'); return; } // foi só um toque
     atirar(pull);
-  };
-  canvas.addEventListener('pointerup', largar);
-  canvas.addEventListener('pointercancel', () => { if (mode === 'mira') { drag = null; g.pull = null; setMode('pronto'); } });
+  });
+  canvas.addEventListener('pointercancel', (e) => {
+    if (toque && e.pointerId === toque.id) toque = null;
+    if (mode === 'mira' && drag && e.pointerId === drag.id) { drag = null; g.pull = null; setMode('pronto'); }
+  });
   canvas.addEventListener('click', () => { if (mode === 'intro') start(); else if (suspensa) retomar(); });
   // teclado: ↑↓ ângulo, ←→ força, Espaço atira e, no ar, rebenta em creme
   document.addEventListener('keydown', (e) => {
@@ -659,6 +685,7 @@ export function initBerlim(root) {
     const aVista = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) >= r.height * 0.6; // o jogo tem de estar à vista
     if (suspensa) { if (aVista && e.code === 'Space' && !e.repeat) { e.preventDefault(); retomar(); } return; }
     if (jogando()) {
+      if (!aVista) return;
       e.preventDefault();
       if (mode === 'pronto') {
         if (e.code === 'Space') { if (!e.repeat) atirar(pullDoTeclado()); return; }
