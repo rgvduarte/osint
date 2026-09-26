@@ -26,6 +26,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import * as faceapi from '@vladmandic/face-api';
+import { pack, unpack } from './format.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
@@ -341,7 +342,6 @@ async function checkPublic(items) {
   } catch (e) { console.warn('  não consegui verificar acesso público:', e.message); }
 }
 
-const b64 = (f32) => Buffer.from(new Float32Array(f32).buffer).toString('base64');
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
 // ---------------------------------------------------------------- main
@@ -356,8 +356,10 @@ async function main() {
   // Reaproveita resultados anteriores: só as fotos novas são processadas.
   const cache = new Map();
   try {
-    const prev = JSON.parse(await fs.readFile(OUT, 'utf8'));
-    prev.photos.forEach((p, i) => cache.set(p.f, { photo: p, faces: prev.faces.filter((f) => f.p === i) }));
+    const prev = unpack(JSON.parse(await fs.readFile(OUT, 'utf8')));
+    const byPhoto = prev.photos.map(() => []);
+    for (const f of prev.faces) byPhoto[f.p]?.push(f);
+    prev.photos.forEach((p, i) => cache.set(p.f, { photo: p, faces: byPhoto[i] }));
   } catch {}
 
   await tf.ready();
@@ -381,15 +383,7 @@ async function main() {
       P.push({ ...hit.photo, s: it.src });
       for (const f of hit.faces) F.push({ ...f, p });
     }
-    const out = {
-      app: 'Inspector Xinxers',
-      version: 1,
-      generatedAt: new Date().toISOString(),
-      source: label,
-      model: 'face-api ssdMobilenetv1 + faceRecognitionNet (128d)',
-      photos: P,
-      faces: F,
-    };
+    const out = pack({ source: label, photos: P, faces: F });
     await fs.mkdir(path.dirname(OUT), { recursive: true });
     await fs.writeFile(OUT + '.tmp', JSON.stringify(out));
     await fs.rename(OUT + '.tmp', OUT);
@@ -443,7 +437,7 @@ async function main() {
       tensor.dispose();
       photos.push(photo);
       for (const f of found) {
-        faces.push({ p, b: [r3(f.box.x / w), r3(f.box.y / h), r3(f.box.width / w), r3(f.box.height / h)], d: b64(f.descriptor) });
+        faces.push({ p, b: [r3(f.box.x / w), r3(f.box.y / h), r3(f.box.width / w), r3(f.box.height / h)], d: f.descriptor });
       }
       console.log(`[${i + 1}/${items.length}] ${found.length} cara(s)  ${it.full.slice(-60)}`);
       if (++processed % 100 === 0) {
