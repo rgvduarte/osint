@@ -63,7 +63,7 @@ export function initToques(root) {
   new ResizeObserver(resize).observe(canvas);
 
   let g = null;       // estado da partida
-  let mode = 'intro'; // intro | playing | over
+  let mode = 'intro'; // intro | playing | falling (a bola caiu, rodapé) | over
   const setMode = (m) => { mode = m; canvas.parentElement.classList.toggle('playing', m === 'playing'); };
   let raf = 0, last = 0;
   let best = load(BEST_KEY, 0);
@@ -236,8 +236,16 @@ export function initToques(root) {
     // a bola caiu: onde?
     if (b.y + b.r >= GROUND + 6) {
       const h = g.ground.find((q) => Math.abs(q.x - b.x) < q.w / 2); // onde toca o fundo da bola
-      die(h ? h.tipo : 'relva');
+      fall(h ? h.tipo : 'relva');
     }
+  }
+
+  // a bola caiu: o jogo congela e entra o rodapé da reportagem; só depois vem o júri
+  const REPLAY = 1.4;
+  function fall(onde) {
+    setMode('falling');
+    g.fall = { onde, t: 0 };
+    g.ball.y = GROUND + 6 - g.ball.r;
   }
 
   function die(onde, fugiu = false) {
@@ -398,13 +406,39 @@ export function initToques(root) {
     ctx.fillStyle = fill; ctx.fillText(text, x, y);
   }
 
+  // rodapé de reportagem de televisão, como no vídeo, mas com o nome do Ricardo
+  function drawRodape(frase, t) {
+    const R = TEXTOS.rodape;
+    const slide = Math.min(1, t / 0.35);
+    const x0 = -W * (1 - slide) ** 2;
+    const y = GROUND - 195;
+    ctx.save();
+    ctx.translate(x0, 0);
+    ctx.font = '800 15px Archivo, system-ui, sans-serif';
+    const nome = R.nome.toUpperCase();
+    const nw = ctx.measureText(nome).width + 30;
+    ctx.fillStyle = 'rgba(18,17,16,.72)'; ctx.fillRect(0, y + 26, W - 14, 38);
+    ctx.fillStyle = '#c8231c'; ctx.fillRect(0, y, nw, 28);
+    ctx.fillStyle = '#e3a22a'; ctx.fillRect(0, y + 26, nw + 60, 3);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(nome, 14, y + 14);
+    ctx.font = '700 9px Archivo, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(18,17,16,.72)'; ctx.fillRect(nw, y + 8, ctx.measureText(R.canal).width + 14, 18);
+    ctx.fillStyle = '#e3a22a';
+    ctx.fillText(R.canal, nw + 7, y + 17);
+    fitFont(frase, 14, W - 40, 'italic 600', 'Archivo, system-ui, sans-serif');
+    ctx.fillStyle = '#fff';
+    ctx.fillText(frase, 12, y + 46);
+    ctx.restore();
+  }
+
   function draw() {
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
     drawField();
 
     if (!g) {
       // antes de começar: a bola a saltitar no pé do miúdo
-      const bob = Math.abs(Math.sin(performance.now() / 380)) * 40;
+      const bob = Math.abs(Math.sin(performance.now() / 380)) * 30;
       drawKid(W / 2, 0, 0);
       drawBall({ x: W / 2 + 14, y: GROUND - 40 - bob - R0, r: R0, rot: 0 });
     } else {
@@ -462,6 +496,8 @@ export function initToques(root) {
         ctx.globalAlpha = 1;
       }
     }
+    if (mode === 'intro') drawRodape(TEXTOS.rodape.frases.intro, 1);
+    if (g && g.fall) drawRodape(TEXTOS.rodape.frases[g.fall.onde], g.fall.t);
     if (mode === 'intro') {
       outlined('Toca na bola!', W / 2, H * 0.36, 28);
       ctx.font = '600 14px Archivo, system-ui, sans-serif'; ctx.fillStyle = INK;
@@ -473,6 +509,7 @@ export function initToques(root) {
     const dt = Math.min(0.033, (ts - last) / 1000 || 0);
     last = ts;
     if (mode === 'playing') update(dt);
+    else if (mode === 'falling' && (g.fall.t += dt) >= REPLAY) die(g.fall.onde);
     draw();
     raf = requestAnimationFrame(loop);
   }
@@ -481,6 +518,7 @@ export function initToques(root) {
     cancelAnimationFrame(raf);
     if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); }
     else if (mode === 'playing') die('relva', true);
+    else if (mode === 'falling') die(g.fall.onde);
   }, { threshold: 0.2 });
   io.observe(canvas);
 

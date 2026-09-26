@@ -113,6 +113,16 @@ export const TEXTOS = {
       "grito": "Nortada! A bola vai de lado!"
     }
   },
+  "rodape": {
+    "nome": "Ricardo",
+    "canal": "ARQUIVO · XINXERS TV",
+    "frases": {
+      "intro": "«O campo tá desmanchado, tá cheio de pedras…»",
+      "pedra": "«Tá cheio de pedras! A gente pode meter o pé…»",
+      "bosta": "«Tá cheio de pedras, cheio de…» (já sabes o resto)",
+      "relva": "«A gente quer jogar à bola!»"
+    }
+  },
   "video_link": "▶ Prova A: \"O campo tá desmanchado\"",
   "regulamento": [
     "Art. 1.º — Dá toques na bola com o dedo. \"A gente pode meter o pé…\", mas o ecrã não aguenta.",
